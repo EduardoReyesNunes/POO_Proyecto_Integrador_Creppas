@@ -1,0 +1,68 @@
+from conexion import crear_conexion
+
+def estatus_topings():
+    conexion = crear_conexion()
+    if not conexion:
+        return []
+
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT id_top, nombre, habilitado FROM topings") 
+        resultado = cursor.fetchall()
+        conexion.close()
+        return resultado
+    except Exception as e:
+        print(f"Error al obtener productos: {e}")
+        return []
+
+def actualizar_estatus_topping(id_topping, nuevo_estado):
+    conexion = crear_conexion()
+    if not conexion:
+        return False
+
+    try:
+        cursor = conexion.cursor()
+        # cambia el si/no a 0/1 para la base de datos
+        estado_str = 'si' if nuevo_estado == 1 else 'no'
+        
+        sql = "UPDATE topings SET habilitado = %s WHERE id_top = %s"
+        cursor.execute(sql, (estado_str, id_topping))
+        conexion.commit() 
+        conexion.close()
+        print(f"Topping ID {id_topping} actualizado a {estado_str}")
+        return True
+    except Exception as e:
+        print(f"Error al actualizar topping: {e}")
+        return False
+
+def agregar_nuevo_topping(nombre_topping):
+    conexion = crear_conexion()
+    if not conexion:
+        return False
+
+    try:
+        cursor = conexion.cursor()
+        sql = "INSERT INTO topings (nombre, habilitado) VALUES (%s, %s)"
+        cursor.execute(sql, (nombre_topping, 'si'))
+        conexion.commit()
+        conexion.close()
+        return True
+    except Exception as e:
+        print(f"Error al insertar topping: {e}")
+        return False
+
+def eliminar_topping(id_topping):
+    conexion = crear_conexion()
+    if not conexion:
+        return False
+
+    try:
+        cursor = conexion.cursor()
+        sql = "DELETE FROM topings WHERE id_top = %s"
+        cursor.execute(sql, (id_topping))
+        conexion.commit()
+        conexion.close()
+        return True
+    except Exception as e:
+        print(f"Error al eliminar topping: {e}")
+        return False
