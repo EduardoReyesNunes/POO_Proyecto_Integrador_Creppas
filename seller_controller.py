@@ -8,13 +8,11 @@ def validar_login(usuario, password):
     
     try:
         cursor = conexion.cursor()
-        # Consultamos si existe el par usuario/contraseña
         sql = "SELECT * FROM users WHERE nombre = %s AND password = %s"
         cursor.execute(sql, (usuario, password))
         result = cursor.fetchone()
         conexion.close()
-        
-        # Devuelve True si encontró algo, False si no
+
         return bool(result) 
     except Exception as e:
         print(f"Error en login: {e}")
@@ -40,7 +38,6 @@ def obtener_productos_por_categoria(id_categoria):
     if not conexion: return []
     try:
         cursor = conexion.cursor(dictionary=True)
-        # Seleccionamos ID, Nombre y Precio
         sql = "SELECT id_producto, nombre, precio FROM productos WHERE id_categoria = %s"
         cursor.execute(sql, (id_categoria,))
         resultado = cursor.fetchall()

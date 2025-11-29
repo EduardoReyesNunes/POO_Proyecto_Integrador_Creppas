@@ -3,10 +3,10 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import os
 
-# --- IMPORTACIONES ACTUALIZADAS ---
-# Ahora usamos tu nuevo controlador para la lógica del vendedor
+# --- IMPORTACIONES NECESARIAS ---
 import seller_controller as controller 
-import admin_view # Para poder ir al panel de admin si se requiere
+import admin_view
+# Ya no necesitamos valid_admin aquí, solo el controlador para validar el admin pass
 
 class sellerApp: 
     def __init__(self, root):
@@ -18,61 +18,32 @@ class sellerApp:
         self.bg_color = "#E0C9B6"
         self.root.configure(bg=self.bg_color)
         
-        # Estado
-        self.usuario_actual = ""
+        # Estado (Establecido por defecto)
+        self.usuario_actual = "Vendedor" # <-- Se inicia con un usuario predeterminado
         self.admin_panel_visible = False
         
         # Cargar recursos
         self.cargar_imagenes()
 
-        # Iniciar Login
-        self.mostrar_login()
+        # Iniciar Interfaz de Ventas directamente
+        self.construir_interfaz_ventas() # <-- Llamada directa a la interfaz
 
     def cargar_imagenes(self):
         self.icon_gear = None
         ruta_img = os.path.join("img", "ajustes.png")
         try:
             # Si tienes la imagen, se carga
+            # NOTA: Usamos Image.LANCZOS en lugar de Image.ANTIALIAS, 
+            # ya que ANTIALIAS está obsoleto.
             img = Image.open(ruta_img).resize((30, 30), Image.LANCZOS)
             self.icon_gear = ImageTk.PhotoImage(img)
         except:
             pass
+            # print("Advertencia: No se pudo cargar img/ajustes.png")
+
 
     # ==========================================
-    #              PANTALLA LOGIN
-    # ==========================================
-    def mostrar_login(self):
-        self.frame_login = tk.Frame(self.root, bg=self.bg_color)
-        self.frame_login.place(relx=0.5, rely=0.5, anchor="center")
-
-        tk.Label(self.frame_login, text="Bienvenido Vendedor", 
-                 font=("Arial", 18, "bold"), bg=self.bg_color).pack(pady=20)
-
-        tk.Label(self.frame_login, text="Usuario:", bg=self.bg_color).pack()
-        self.entry_user = tk.Entry(self.frame_login, font=("Arial", 12))
-        self.entry_user.pack(pady=5)
-
-        tk.Label(self.frame_login, text="Contraseña:", bg=self.bg_color).pack()
-        self.entry_pass = tk.Entry(self.frame_login, show="*", font=("Arial", 12))
-        self.entry_pass.pack(pady=5)
-
-        tk.Button(self.frame_login, text="INICIAR SESIÓN", bg="#E5A586", font=("Arial", 10, "bold"),
-                  command=self.validar_login).pack(pady=20)
-
-    def validar_login(self):
-        usuario = self.entry_user.get().strip()
-        password = self.entry_pass.get().strip()
-
-        # USAMOS EL NUEVO CONTROLLER
-        if controller.validar_login(usuario, password):
-            self.usuario_actual = usuario
-            self.frame_login.destroy() 
-            self.construir_interfaz_ventas()
-        else:
-            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
-
-    # ==========================================
-    #          INTERFAZ DE VENTAS (POS)
+    #           INTERFAZ DE VENTAS (POS)
     # ==========================================
     def construir_interfaz_ventas(self):
         self.root.title(f"Punto de Venta - Atendiendo: {self.usuario_actual}")
@@ -115,7 +86,7 @@ class sellerApp:
         self.top_bar = tk.Frame(self.panel_der, bg=self.bg_color)
         self.top_bar.pack(fill="x", pady=(0, 10))
 
-        # Botón Engranaje
+        # Botón Engranaje (Muestra el login de Admin)
         if self.icon_gear:
             btn_gear = tk.Button(self.top_bar, image=self.icon_gear, bg=self.bg_color, bd=0,
                                  command=self.toggle_admin_login)
@@ -132,7 +103,7 @@ class sellerApp:
         tk.Button(self.frame_admin_login, text="Entrar", bg="#ccc", font=("Arial", 8),
                   command=self.abrir_panel_admin).pack(side="left", padx=5)
 
-        # Botón Salir
+        # Botón Salir (Cierra la aplicación)
         tk.Button(self.top_bar, text="SALIR ➡️", bg="#E5A586", font=("Arial", 9, "bold"),
                   command=self.cerrar_sesion).pack(side="right")
 
@@ -161,7 +132,8 @@ class sellerApp:
 
     def abrir_panel_admin(self):
         password = self.entry_admin_pass.get().strip()
-        # Verificamos si es admin usando el controller
+        
+        # Verificamos si es admin usando el controller (usando un usuario placeholder para Admin)
         if controller.validar_login("ADMIN", password): 
             self.root.destroy()
             root_admin = tk.Tk()
@@ -171,13 +143,11 @@ class sellerApp:
             messagebox.showerror("Error", "Contraseña de administrador incorrecta")
 
     def cerrar_sesion(self):
-        self.root.destroy()
-        main_root = tk.Tk()
-        sellerApp(main_root)
-        main_root.mainloop()
+        """Cierra la aplicación (no hay pantalla de login a la que volver)."""
+        self.root.destroy() # <-- Cierra la ventana principal
 
     def cargar_categorias(self):
-        # USAMOS EL NUEVO CONTROLLER
+        # USAMOS EL CONTROLLER
         cats = controller.obtener_categorias()
         if not cats: return
 
@@ -191,7 +161,7 @@ class sellerApp:
     def cargar_productos(self, id_categoria):
         for w in self.frame_prods.winfo_children(): w.destroy()
 
-        # USAMOS EL NUEVO CONTROLLER
+        # USAMOS EL CONTROLLER
         productos = controller.obtener_productos_por_categoria(id_categoria)
         
         row, col = 0, 0
@@ -213,4 +183,4 @@ class sellerApp:
 
     def agregar_al_ticket(self, producto):
         # Agrega fila al ticket (solo visual por ahora)
-        self.tree.insert("", "end", values=(1, producto['nombre'], f"${producto['precio']}"))
+        self.tree.insert("", "end", values=(1, producto['nombre'], f"${producto['precio']:.2f}"))
