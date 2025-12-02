@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from admin_controller import (actualizar_estatus_topping, estatus_topings,agregar_nuevo_topping, eliminar_topping_bd,actualizar_nombre_topping)
+from admin_controller import (actualizar_estatus_topping, estatus_topings,agregar_nuevo_topping, eliminar_topping_bd,
+                              actualizar_nombre_topping, mostrar_productos,agregar_nuevo_producto, obtener_productos_con_id,
+                              eliminar_producto_bd, actualizar_producto, obtener_reporte_ventas_agrupadas,)
+from seller_controller import obtener_categorias
 import seller_view
 
 # colores
@@ -98,7 +101,9 @@ class adminapp:
         if boton_activo:
             boton_activo.config(bg=COLOR_BTN_ACTIVE)
 
-    # paneles
+     # paneles
+
+    '''INVENTARIO / TOPPINGS'''
 
     def mostrar_inventario(self):
         self._limpiar_panel_principal()
@@ -107,7 +112,7 @@ class adminapp:
         tk.Label(self.main_frame, text="Control de Inventario", font=("Arial", 24, "bold"),
                  bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(side="top", pady=(10, 5))
 
-    # botones abajo
+     # botones abajo
         footer_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         footer_frame.pack(side="bottom", fill="x", pady=20, padx=30)
 
@@ -125,7 +130,7 @@ class adminapp:
                                   command=self.panel_funciones)
         btn_funciones.pack(side="right")
 
-    # encabezados
+     # encabezados
         header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         header_frame.pack(side="top", fill="x", pady=10, padx=40) 
         
@@ -137,7 +142,7 @@ class adminapp:
 
         ttk.Separator(self.main_frame, orient="horizontal").pack(side="top", fill="x", padx=30)
 
-    # scroll 
+     # scroll 
         container_scroll = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         container_scroll.pack(side="top", fill="both", expand=True, padx=30, pady=5)
 
@@ -163,7 +168,7 @@ class adminapp:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-    # botones 
+     # botones 
         
         # Función simplificada para el click del botón
         def click_boton(btn_widget, var_tk, id_db):
@@ -213,7 +218,8 @@ class adminapp:
             btn.pack(side="right", padx=10)
 
 
-    # ventana agregar
+     # ventana agregar
+    
     def _popup_agregar_topping(self):
         ventana_add = tk.Toplevel(self.root)
         ventana_add.title("Agregar Ingrediente")
@@ -314,7 +320,7 @@ class adminapp:
                   bg=COLOR_BTN_RED, fg="white", font=("Arial", 11, "bold"),
                   padx=15, pady=10, command=self.accion_eliminar).pack(side="left")
 
-    # logica de los botones
+     # logica de los botones
 
     def accion_eliminar(self):
         seleccion = self.tree.selection()
@@ -376,19 +382,455 @@ class adminapp:
         tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white",
                   command=guardar_cambio).pack(pady=15)
 
-        
+    '''VENTAS'''
     def mostrar_ventas(self):
         self._limpiar_panel_principal()
         self._resaltar_boton(self.btn_ventas)
         tk.Label(self.main_frame, text="Sección de Ventas", font=("Arial", 20), bg=COLOR_MAIN_BG).pack(pady=50)
 
+    '''PRODUCTOS'''
+    
     def mostrar_productos(self):
         self._limpiar_panel_principal()
-        self._resaltar_boton(self.btn_productos)
-        tk.Label(self.main_frame, text="Gestión de Productos", font=("Arial", 20), bg=COLOR_MAIN_BG).pack(pady=50)
+        self._resaltar_boton(self.btn_productos) 
 
+        tk.Label(self.main_frame, text="Control de Productos", font=("Arial", 24, "bold"),
+                 bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(side="top", pady=(10, 5))
+                 
+        footer_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        footer_frame.pack(side="bottom", fill="x", pady=20, padx=30)
+
+        # agregar
+        btn_add_producto = tk.Button(footer_frame, text="➕ Agregar Nuevo", 
+                            bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 11, "bold"),
+                            padx=20, pady=10,
+                            command=self._mostrar_panel_agregar_producto)
+        btn_add_producto.pack(side="right", padx=(10, 0))
+
+        # funciones
+        btn_funciones_producto = tk.Button(footer_frame, text="⚙️ Funciones / Eliminar", 
+                                  bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 11, "bold"),
+                                  padx=20, pady=10,
+                                  command=self.panel_funciones_producto)
+        btn_funciones_producto.pack(side="right")
+
+        header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        header_frame.pack(side="top", fill="x", pady=10, padx=40) 
+        
+        tk.Label(header_frame, text="Nombre", bg=COLOR_MAIN_BG, fg=COLOR_TEXT,
+                 font=("Arial", 12, "bold"), width=15, anchor="w").pack(side="left", padx=(0, 10))
+
+        tk.Label(header_frame, text="Cant. Top.", bg=COLOR_MAIN_BG, fg=COLOR_TEXT,
+                 font=("Arial", 12, "bold"), width=10, anchor="center").pack(side="right", padx=10) 
+
+        tk.Label(header_frame, text="Precio", bg=COLOR_MAIN_BG, fg=COLOR_TEXT,
+                 font=("Arial", 12, "bold"), width=8, anchor="center").pack(side="right", padx=10) 
+                 
+        tk.Label(header_frame, text="Descripción", bg=COLOR_MAIN_BG, fg=COLOR_TEXT,
+                 font=("Arial", 12, "bold"), anchor="w").pack(side="left", expand=True)
+        
+        ttk.Separator(self.main_frame, orient="horizontal").pack(side="top", fill="x", padx=30)
+
+        container_scroll = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        container_scroll.pack(side="top", fill="both", expand=True, padx=30, pady=5)
+
+        canvas = tk.Canvas(container_scroll, bg=COLOR_MAIN_BG, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container_scroll, orient="vertical", command=canvas.yview)
+        
+        scrollable_frame = tk.Frame(canvas, bg=COLOR_MAIN_BG)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        window_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def ajustar_ancho(event):
+            canvas.itemconfig(window_id, width=event.width)
+
+        canvas.bind("<Configure>", ajustar_ancho)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        items = mostrar_productos() 
+        for nombre, descripcion, precio, cant_top in items:
+            row_frame = tk.Frame(scrollable_frame, bg="#FFF8F0")
+            # fila
+            row_frame.pack(fill="x", pady=5, ipadx=5, ipady=5)
+            tk.Label(row_frame, text=nombre, font=("Arial", 12, "bold"), width=15, anchor="w", 
+                     bg="#FFF8F0", fg="#5D4037").pack(side="left", padx=(0, 10))
+            tk.Label(row_frame, text=cant_top, font=("Arial", 12), width=10, anchor="center", 
+                     bg="#FFF8F0", fg="#5D4037").pack(side="right", padx=10)
+            tk.Label(row_frame, text=f"${precio:.2f}", font=("Arial", 12), width=8, anchor="center",
+                     bg="#FFF8F0", fg="#5D4037").pack(side="right", padx=10) 
+            tk.Label(row_frame, text=descripcion, font=("Arial", 10), anchor="w", 
+                     bg="#FFF8F0", fg="#594A42").pack(side="left", expand=True, fill="x")
+
+    def _mostrar_panel_agregar_producto(self):
+        """Muestra la interfaz de agregar producto directamente en el panel principal."""
+        self._limpiar_panel_principal()
+        self._resaltar_boton(self.btn_productos) 
+
+        header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        header_frame.pack(fill="x", pady=10)
+        
+        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white",
+                  font=("Arial", 10, "bold"), command=self.mostrar_productos).pack(side="left", padx=10)
+
+        tk.Label(header_frame, text="➕ Agregar Nuevo Producto", font=("Arial", 20, "bold"),
+                 bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(side="left", padx=20)
+        
+        ttk.Separator(self.main_frame, orient="horizontal").pack(fill="x", padx=30)
+        
+        form_frame = tk.Frame(self.main_frame, bg=COLOR_SIDEBAR, padx=30, pady=20)
+        form_frame.pack(fill="both", expand=True, padx=30, pady=20)
+        form_frame.grid_columnconfigure(0, weight=1)
+        form_frame.grid_columnconfigure(1, weight=3)
+
+        # Variables de control
+        self.categoria_seleccionada = tk.StringVar(form_frame)
+        self.cant_topings_var = tk.StringVar(form_frame, value="0") 
+        self.entry_nombre = tk.Entry(form_frame, font=("Arial", 12))
+        self.entry_desc = tk.Entry(form_frame, font=("Arial", 12))
+        self.entry_precio = tk.Entry(form_frame, font=("Arial", 12))
+        self.frame_top = tk.Frame(form_frame, bg=COLOR_SIDEBAR) 
+        
+        # muestra cosas si es crepa o waffle
+        def _mostrar_campo_topings(*args):
+            cat = self.categoria_seleccionada.get()
+            if "crepa" in cat.lower() or "waffle" in cat.lower():
+                self.frame_top.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+            else:
+                self.frame_top.grid_remove()
+                self.cant_topings_var.set("0")
+
+        # campos del formulario
+        categorias_raw = obtener_categorias() 
+        categorias = [c['nombre_categoria'] for c in categorias_raw] if categorias_raw else ["Sin Categorías"]
+
+        tk.Label(form_frame, text="1. Categoría:", bg=COLOR_SIDEBAR, 
+                 fg=COLOR_TEXT, font=("Arial", 11, "bold")).grid(row=0, column=0, sticky="w", pady=(5, 5))
+        
+        if categorias:
+             self.categoria_seleccionada.set(categorias[0])
+
+        menu_categoria = ttk.OptionMenu(form_frame, self.categoria_seleccionada, None, *categorias)
+        menu_categoria.config(width=25)
+        menu_categoria.grid(row=0, column=1, sticky="w", pady=(5, 5), padx=5)
+        self.categoria_seleccionada.trace_add("write", _mostrar_campo_topings)
+        
+        # nombre
+        tk.Label(form_frame, text="2. Nombre:", bg=COLOR_SIDEBAR, 
+                 fg=COLOR_TEXT, font=("Arial", 11, "bold")).grid(row=1, column=0, sticky="w", pady=(10, 5))
+        self.entry_nombre.grid(row=1, column=1, sticky="ew", pady=(10, 5), padx=5)
+        
+        # descripcion
+        tk.Label(form_frame, text="3. Descripción:", bg=COLOR_SIDEBAR, 
+                 fg=COLOR_TEXT, font=("Arial", 11, "bold")).grid(row=2, column=0, sticky="w", pady=(10, 5))
+        self.entry_desc.grid(row=2, column=1, sticky="ew", pady=(10, 5), padx=5)
+
+        # precio
+        tk.Label(form_frame, text="4. Precio (0.00):", bg=COLOR_SIDEBAR, 
+                 fg=COLOR_TEXT, font=("Arial", 11, "bold")).grid(row=3, column=0, sticky="w", pady=(10, 5))
+        self.entry_precio.grid(row=3, column=1, sticky="ew", pady=(10, 5), padx=5)
+
+        # cantidad de toppings
+        tk.Label(self.frame_top, text="5. Cantidad Máx. de Toppings:", bg=COLOR_SIDEBAR, 
+                 fg=COLOR_TEXT, font=("Arial", 11, "bold")).pack(side="left", anchor="w")
+        
+        spinbox_top = tk.Spinbox(self.frame_top, from_=0, to=10, textvariable=self.cant_topings_var, width=5, font=("Arial", 12))
+        spinbox_top.pack(side="right", padx=10)
+        
+        # muestra/oculta el campo condicional al cargar
+        _mostrar_campo_topings() 
+
+        tk.Button(self.main_frame, text="💾 Guardar Producto", bg=COLOR_BTN_GREEN, fg="white",
+                  font=("Arial", 12, "bold"), command=self.guardar_datos_prod).pack(pady=30)
+        
+    def guardar_datos_prod(self):
+        nombre = self.entry_nombre.get().strip()
+        descripcion = self.entry_desc.get().strip()
+        precio_str = self.entry_precio.get().strip()
+        cant_top = self.cant_topings_var.get()
+        categoria = self.categoria_seleccionada.get()
+
+        if not nombre or not descripcion or not precio_str:
+            messagebox.showwarning("Cuidado", "Faltan campos obligatorios.")
+            return
+
+        try:
+            precio = float(precio_str)
+            if precio <= 0: raise ValueError
+        except ValueError:
+            messagebox.showerror("Error", "El precio debe ser un número positivo válido.")
+            return
+        
+        try:
+            cant_top_int = int(cant_top)
+        except ValueError:
+             messagebox.showerror("Error", "La cantidad de toppings debe ser un número entero.")
+             return
+        
+        exito = agregar_nuevo_producto(nombre, descripcion, precio, cant_top_int, categoria)
+        
+        if exito == "DUPLICADO":
+            messagebox.showinfo("Error", f"'{nombre}' Ya está registrado.")
+        elif exito:
+            messagebox.showinfo("Éxito", f"'{nombre}' agregado correctamente")
+            self.mostrar_productos()
+        else:
+            messagebox.showerror("Error", "No se pudo guardar en la base de datos.")
+            
+    def panel_funciones_producto(self):
+        self._limpiar_panel_principal()
+        self._resaltar_boton(self.btn_productos)
+
+        header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        header_frame.pack(fill="x", pady=10)
+        
+        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white",
+                  font=("Arial", 10, "bold"), command=self.mostrar_productos).pack(side="left", padx=10)
+
+        tk.Label(header_frame, text="Gestión de Productos", font=("Arial", 20, "bold"),
+                 bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(side="left", padx=20)
+
+
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Treeview", 
+                        background="white", fieldbackground="white", foreground="black",
+                        font=("Arial", 11), rowheight=25)
+        style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background="#D7C2A8")
+
+        # crear la tabla
+        frame_tabla = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        frame_tabla.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # columnas (Asegúrate que coincida con el orden de obtener_productos_con_id)
+        columns = ("id_prod", "nombre","descripcion","precio", "id_categoria", "cant_top")
+        self.tree = ttk.Treeview(frame_tabla, columns=columns, show="headings", height=12)
+        
+        # encabezados
+        self.tree.heading("id_prod", text="ID")
+        self.tree.heading("nombre", text="Nombre")
+        self.tree.heading("descripcion", text="Descripción")
+        self.tree.heading("precio", text="Precio")
+        self.tree.heading("id_categoria", text="ID Cat.")
+        self.tree.heading("cant_top", text="Toppings Máx.")
+
+        # configuración de las columnas (¡CORREGIDO!)
+        self.tree.column("id_prod", width=50, anchor="center")
+        self.tree.column("nombre", width=150, anchor="w")
+        self.tree.column("descripcion", width=250, anchor="w")
+        self.tree.column("precio", width=80, anchor="center")
+        self.tree.column("id_categoria", width=80, anchor="center")
+        self.tree.column("cant_top", width=80, anchor="center")
+
+        # sroll
+        scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # cargar los datos (USANDO LA FUNCIÓN CON ID)
+        datos_productos = obtener_productos_con_id()
+        for item in datos_productos:
+            self.tree.insert("", "end", values=item)
+
+        # botones 
+        frame_botones = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        frame_botones.pack(fill="x", pady=20, padx=20)
+
+        tk.Button(frame_botones, text="✏️ Editar datos", 
+                  bg="#FFD700", fg="black", font=("Arial", 11, "bold"),
+                  padx=15, pady=10, command=self.accion_actualizar_producto).pack(side="left", padx=(0, 20))
+
+        tk.Button(frame_botones, text="🗑️ Eliminar Seleccionado", 
+                  bg=COLOR_BTN_RED, fg="white", font=("Arial", 11, "bold"),
+                  padx=15, pady=10, command=self.accion_eliminar_producto).pack(side="left")
+
+
+    def accion_eliminar_producto(self):
+        seleccion = self.tree.selection()
+        if not seleccion:
+            messagebox.showwarning("Atención", "Selecciona un producto de la tabla para eliminarlo.")
+            return
+        
+        item = self.tree.item(seleccion)
+        id_prod = item['values'][0]
+        nombre = item['values'][1]
+
+        confirmar = messagebox.askyesno("Confirmar Eliminación", 
+                                        f"¿Seguro que deseas eliminar el producto '{nombre}'?\nEsta acción es permanente.")
+        if confirmar:
+            if eliminar_producto_bd(id_prod):
+                messagebox.showinfo("Éxito", "Producto eliminado correctamente.")
+                self.panel_funciones_producto() # Recargar la vista
+            else:
+                messagebox.showerror("Error", "No se pudo eliminar de la base de datos.")
+
+    def accion_actualizar_producto(self):
+        # ... (Implementación de la ventana de edición, similar a la que revisamos antes)
+        seleccion = self.tree.selection()
+        if not seleccion:
+            messagebox.showwarning("Atención", "Selecciona un producto para editar sus datos.")
+            return
+
+        item = self.tree.item(seleccion)
+        # Extraer valores del Treeview
+        id_prod, nombre_actual, desc_actual, precio_actual, id_categoria_actual, cant_top_actual = item['values']
+
+        # --- Obtener las categorías (necesario para el OptionMenu) ---
+        categorias_raw = obtener_categorias() 
+        categorias_nombres = [c['nombre_categoria'] for c in categorias_raw] if categorias_raw else ["Sin Categorías"]
+        
+        # Buscar el nombre de la categoría actual para mostrarla
+        nombre_categoria_actual = next((c['nombre_categoria'] for c in categorias_raw if c['id_categorias'] == id_categoria_actual), categorias_nombres[0] if categorias_nombres else "")
+
+        # --- Creación de la Ventana de Edición ---
+        ventana_edit = tk.Toplevel(self.root)
+        ventana_edit.title(f"Editar Producto: {nombre_actual}")
+        ventana_edit.geometry("450x380")
+        ventana_edit.config(bg=COLOR_SIDEBAR)
+        ventana_edit.transient(self.root)
+        ventana_edit.grab_set()
+
+        form_frame = tk.Frame(ventana_edit, bg=COLOR_SIDEBAR, padx=20, pady=15)
+        form_frame.pack(fill="both", expand=True)
+        form_frame.grid_columnconfigure(0, weight=1)
+        form_frame.grid_columnconfigure(1, weight=3)
+
+        # Variables de Control
+        self._nombre_var = tk.StringVar(form_frame, value=nombre_actual)
+        self._desc_var = tk.StringVar(form_frame, value=desc_actual)
+        self._precio_var = tk.StringVar(form_frame, value=str(precio_actual))
+        self._cant_top_var = tk.StringVar(form_frame, value=str(cant_top_actual)) 
+        self._categoria_var = tk.StringVar(form_frame, value=nombre_categoria_actual)
+        
+        frame_top = tk.Frame(form_frame, bg=COLOR_SIDEBAR) 
+
+        def mostrar_campo_topings_edit(*args):
+            cat = self._categoria_var.get()
+            if "crepa" in cat.lower() or "waffle" in cat.lower():
+                frame_top.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+            else:
+                frame_top.grid_remove()
+                self._cant_top_var.set("0")
+
+        # Categoría
+        tk.Label(form_frame, text="Categoría:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT).grid(row=0, column=0, sticky="w", pady=5)
+        menu_categoria = ttk.OptionMenu(form_frame, self._categoria_var, None, *categorias_nombres)
+        menu_categoria.config(width=25)
+        menu_categoria.grid(row=0, column=1, sticky="w", pady=5, padx=5)
+        self._categoria_var.trace_add("write", mostrar_campo_topings_edit)
+
+        # Nombre
+        tk.Label(form_frame, text="Nombre:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT).grid(row=1, column=0, sticky="w", pady=5)
+        tk.Entry(form_frame, textvariable=self._nombre_var, font=("Arial", 12)).grid(row=1, column=1, sticky="ew", pady=5, padx=5)
+
+        # Descripción
+        tk.Label(form_frame, text="Descripción:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT).grid(row=2, column=0, sticky="w", pady=5)
+        tk.Entry(form_frame, textvariable=self._desc_var, font=("Arial", 12)).grid(row=2, column=1, sticky="ew", pady=5, padx=5)
+
+        # Precio
+        tk.Label(form_frame, text="Precio (0.00):", bg=COLOR_SIDEBAR, fg=COLOR_TEXT).grid(row=3, column=0, sticky="w", pady=5)
+        tk.Entry(form_frame, textvariable=self._precio_var, font=("Arial", 12)).grid(row=3, column=1, sticky="ew", pady=5, padx=5)
+        
+        # Cantidad de toppings (Marco condicional)
+        tk.Label(frame_top, text="Toppings Máx.:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT).pack(side="left", anchor="w")
+        tk.Spinbox(frame_top, from_=0, to=10, textvariable=self._cant_top_var, width=5, font=("Arial", 12)).pack(side="right", padx=10)
+        
+        mostrar_campo_topings_edit() 
+
+        def guardar_cambio_prod():
+            nombre = self._nombre_var.get().strip()
+            descripcion = self._desc_var.get().strip()
+            precio_str = self._precio_var.get().strip()
+            cant_top = self._cant_top_var.get()
+            categoria = self._categoria_var.get()
+
+            if not nombre or not descripcion or not precio_str:
+                messagebox.showwarning("Cuidado", "Faltan campos obligatorios.", parent=ventana_edit)
+                return
+            try:
+                precio = float(precio_str)
+                cant_top_int = int(cant_top)
+                if precio <= 0: raise ValueError
+            except ValueError:
+                messagebox.showerror("Error", "El Precio y la Cant. Toppings deben ser números válidos.", parent=ventana_edit)
+                return
+            
+            if actualizar_producto(id_prod, nombre, descripcion, precio, cant_top_int, categoria):
+                messagebox.showinfo("Éxito", "Producto actualizado correctamente.", parent=ventana_edit)
+                ventana_edit.destroy()
+                self.panel_funciones_producto() # Recargar tabla
+            else:
+                messagebox.showerror("Error", "Fallo al actualizar en la Base de Datos. (Revisa la terminal para detalles)", parent=ventana_edit)
+
+        tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white",
+                  font=("Arial", 11, "bold"), command=guardar_cambio_prod).pack(pady=20)
+    
+    '''REPORTES'''
+    
     def mostrar_reportes(self):
         self._limpiar_panel_principal()
         self._resaltar_boton(self.btn_reportes)
-        tk.Label(self.main_frame, text="Reportes Generales", font=("Arial", 20), bg=COLOR_MAIN_BG).pack(pady=50)
+        
+        tk.Label(self.main_frame, text="Reportes de Venta (Transacciones)", font=("Arial", 24, "bold"),
+                 bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(side="top", pady=(10, 5))
+        
+        # Obtener los datos agrupados
+        reporte_datos = obtener_reporte_ventas_agrupadas()
+        
+        if not reporte_datos:
+            tk.Label(self.main_frame, text="No hay ventas registradas para mostrar.", font=("Arial", 14), bg=COLOR_MAIN_BG).pack(pady=50)
+            return
+
+        # --- Contenedor con Scroll (similar a otras vistas) ---
+        scroll_container = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
+        scroll_container.pack(fill="both", expand=True, padx=30, pady=10)
+        
+        canvas = tk.Canvas(scroll_container, bg=COLOR_MAIN_BG, highlightthickness=0)
+        v_scrollbar = ttk.Scrollbar(scroll_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=COLOR_MAIN_BG)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=v_scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        v_scrollbar.pack(side="right", fill="y")
+        
+        # --- Mostrar cada grupo de venta (Transacción) ---
+        for grupo in reporte_datos:
+            # Etiqueta Maestra (Fecha e ID de Ticket)
+            frame_transaccion = tk.LabelFrame(scrollable_frame, text=f"Ticket ID: {grupo['id_ticket']} - Fecha: {grupo['fecha']}", 
+                                              font=("Arial", 14, "bold"), padx=10, pady=10, bg="#FFF8F0", fg=COLOR_TEXT)
+            frame_transaccion.pack(fill="x", pady=10, padx=10)
+            
+            # Encabezados de la tabla (dentro del LabelFrame)
+            header = tk.Frame(frame_transaccion, bg="#EADBC8")
+            header.pack(fill="x", pady=(0, 5))
+            tk.Label(header, text="ID Línea", width=8, font=("Arial", 10, "bold"), bg="#EADBC8").pack(side="left", padx=(5, 10))
+            tk.Label(header, text="Descripción Venta", anchor="w", font=("Arial", 10, "bold"), bg="#EADBC8").pack(side="left", expand=True, fill="x")
+            tk.Label(header, text="Total Línea", width=10, font=("Arial", 10, "bold"), bg="#EADBC8").pack(side="right", padx=5)
+
+            # Detalles de cada línea de producto en la transacción
+            for detalle in grupo['detalles']:
+                frame_detalle = tk.Frame(frame_transaccion, bg="#FFF8F0")
+                frame_detalle.pack(fill="x", pady=1)
+
+                tk.Label(frame_detalle, text=detalle['id_linea'], width=8, font=("Arial", 10), bg="#FFF8F0").pack(side="left", padx=(5, 10))
+                tk.Label(frame_detalle, text=detalle['descripcion'], anchor="w", font=("Arial", 10), bg="#FFF8F0").pack(side="left", expand=True, fill="x")
+                tk.Label(frame_detalle, text=f"${detalle['total_linea']:.2f}", width=10, font=("Arial", 10), bg="#FFF8F0").pack(side="right", padx=5)
+                
+            # Total del Ticket
+            tk.Label(frame_transaccion, text=f"TOTAL DEL TICKET: ${grupo['total_final']:.2f} (Vendedor ID: {grupo['id_vendedor']})", 
+                     font=("Arial", 12, "bold"), bg="#EADBC8", fg=COLOR_TEXT, anchor="e").pack(fill="x", pady=(5, 0))
 
