@@ -4,29 +4,31 @@ from PIL import Image, ImageTk
 import os
 import seller_controller as controller 
 import admin_view
+from decimal import Decimal, InvalidOperation # Importar Decimal para manejo de moneda
 
 class sellerApp: 
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de Punto de Venta")
         self.root.geometry("1000x700")
+        self.root.state('zoomed') # pantalla completa
         self.bg_color = "#E0C9B6"
         self.root.configure(bg=self.bg_color)
         self.usuario_actual = "Alexa"
         self.admin_panel_visible = False
         self.id_vendedor = 2 
         self.carrito_items = []
-        # carga la imagen
+        # cargar iconos
         self.cargar_imagenes()
 
-        # Iniciar Interfaz de Ventas directamente
+        # iniciar ui
         self.construir_interfaz_ventas() 
 
     def cargar_imagenes(self):
         self.icon_gear = None
         ruta_img = os.path.join("img", "ajustes.png")
         try:
-            img = Image.open(ruta_img).resize((30, 30), Image.LANCZOS)
+            img = Image.open(ruta_img).resize((30, 30), Image.LANCZOS) 
             self.icon_gear = ImageTk.PhotoImage(img)
         except:
             pass
@@ -34,75 +36,109 @@ class sellerApp:
     def construir_interfaz_ventas(self):
         self.root.title(f"Punto de Venta - Atendiendo: {self.usuario_actual}")
         
-        # Grid: Columna 0 (Ticket 30%), Columna 1 (Catálogo 70%)
+        # grid
         self.root.columnconfigure(0, weight=3)
         self.root.columnconfigure(1, weight=7)
         self.root.rowconfigure(0, weight=1)
 
-        # --- PANEL IZQUIERDO (Ticket) ---
+        # --- PANEL TICKET ---
         self.panel_izq = tk.Frame(self.root, bg="#D6BFA8", bd=2, relief=tk.RIDGE)
         self.panel_izq.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-        # Botones Ticket
+        # botones ticket
         frame_btns = tk.Frame(self.panel_izq, bg="#D6BFA8")
         frame_btns.pack(fill="x", pady=10)
-        estilo = {"bg": "#E5A586", "font": ("Arial", 9, "bold"), "width": 10}
+        estilo = {"bg": "#E5A586", "font": ("Arial", 11, "bold"), "width": 10} 
 
         tk.Button(frame_btns, text="PAGAR", **estilo, command=self.procesar_pago).pack(side="left", padx=5, expand=True)
         tk.Button(frame_btns, text="BORRAR", **estilo, command=self.borrar_item_ticket).pack(side="left", padx=5, expand=True)
         tk.Button(frame_btns, text="LIMPIAR", **estilo, command=self.limpiar_ticket).pack(side="left", padx=5, expand=True)
 
         # tabla
+        style = ttk.Style()
+        style.configure("Treeview.Heading", font=("Arial", 11, "bold"))
+        style.configure("Treeview", font=("Arial", 10))
+        
         self.tree = ttk.Treeview(self.panel_izq, columns=("cant", "desc", "importe"), show="headings")
         self.tree.heading("cant", text="Cant")
         self.tree.heading("desc", text="Descripción")
         self.tree.heading("importe", text="Importe")
-        self.tree.column("cant", width=40, anchor="center")
-        self.tree.column("desc", width=150)
-        self.tree.column("importe", width=70, anchor="e")
+        self.tree.column("cant", width=50, anchor="center") 
+        self.tree.column("desc", width=200) 
+        self.tree.column("importe", width=80, anchor="e") 
         self.tree.pack(fill="both", expand=True, padx=5)
 
-        self.lbl_total = tk.Label(self.panel_izq, text="TOTAL: $0.00", font=("Arial", 20, "bold"), bg="#D6BFA8")
+        # Inicializar el total como Decimal(0) para consistencia
+        self.lbl_total = tk.Label(self.panel_izq, text="TOTAL: $0.00", font=("Arial", 30, "bold"), bg="#D6BFA8") 
         self.lbl_total.pack(pady=20)
 
         # catalogo
         self.panel_der = tk.Frame(self.root, bg=self.bg_color)
         self.panel_der.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
-        # engranaje y admin
+        # top bar
         self.top_bar = tk.Frame(self.panel_der, bg=self.bg_color)
         self.top_bar.pack(fill="x", pady=(0, 10))
 
-        # boton que oculta el login
+        # boton admin
         if self.icon_gear:
             btn_gear = tk.Button(self.top_bar, image=self.icon_gear, bg=self.bg_color, bd=0,
                                  command=self.toggle_admin_login)
         else:
-            btn_gear = tk.Button(self.top_bar, text="⚙️", font=("Arial", 14), bg=self.bg_color,
+            btn_gear = tk.Button(self.top_bar, text="⚙️", font=("Arial", 16), bg=self.bg_color, 
                                  command=self.toggle_admin_login)
         btn_gear.pack(side="left")
 
         # login oculto
         self.frame_admin_login = tk.Frame(self.top_bar, bg="white", bd=1, relief="solid")
-        tk.Label(self.frame_admin_login, text="Admin Pass:", font=("Arial", 9)).pack(side="left", padx=5)
-        self.entry_admin_pass = tk.Entry(self.frame_admin_login, show="*", width=10)
+        tk.Label(self.frame_admin_login, text="Admin Pass:", font=("Arial", 10)).pack(side="left", padx=5)
+        self.entry_admin_pass = tk.Entry(self.frame_admin_login, show="*", width=12) 
         self.entry_admin_pass.pack(side="left", padx=5)
-        tk.Button(self.frame_admin_login, text="Entrar", bg="#ccc", font=("Arial", 8),
+        tk.Button(self.frame_admin_login, text="Entrar", bg="#ccc", font=("Arial", 9),
                   command=self.abrir_panel_admin).pack(side="left", padx=5)
 
         # salir
-        tk.Button(self.top_bar, text="SALIR ➡️", bg="#E5A586", font=("Arial", 9, "bold"),
+        tk.Button(self.top_bar, text="SALIR ➡️", bg="#E5A586", font=("Arial", 11, "bold"), 
                   command=self.cerrar_sesion).pack(side="right")
 
         # categorias
         self.frame_cats = tk.Frame(self.panel_der, bg=self.bg_color)
         self.frame_cats.pack(fill="x")
 
-        # productos
-        self.frame_prods = tk.Frame(self.panel_der, bg=self.bg_color, bd=2, relief=tk.SUNKEN)
-        self.frame_prods.pack(fill="both", expand=True, pady=5)
+        # --- CONTENEDOR PRODUCTOS CON SCROLL ---
+        self.frame_prods_container = tk.Frame(self.panel_der, bg=self.bg_color, bd=2, relief=tk.SUNKEN)
+        self.frame_prods_container.pack(fill="both", expand=True, pady=5)
+        
+        # canvas para scroll
+        self.canvas_prods = tk.Canvas(self.frame_prods_container, bg=self.bg_color)
+        self.scrollbar_prods = ttk.Scrollbar(self.frame_prods_container, orient="vertical", command=self.canvas_prods.yview)
+        
+        self.frame_prods = tk.Frame(self.canvas_prods, bg=self.bg_color) # contenedor de botones
 
-        # carga las categorias
+        self.canvas_prods.pack(side="left", fill="both", expand=True)
+        self.scrollbar_prods.pack(side="right", fill="y")
+        
+        self.canvas_prods.configure(yscrollcommand=self.scrollbar_prods.set)
+        
+        # configurar scroll
+        self.frame_prods.bind(
+            "<Configure>",
+            lambda e: self.canvas_prods.configure(
+                scrollregion=self.canvas_prods.bbox("all")
+            )
+        )
+        # Aquí se guarda el ID de la ventana dentro del Canvas
+        self.window_id = self.canvas_prods.create_window((0, 0), window=self.frame_prods, anchor="nw")
+        
+        # ajustar ancho
+        def ajustar_ancho(event):
+            # Usar el ID guardado para ajustar el ancho
+            self.canvas_prods.itemconfig(self.window_id, width=event.width)
+        
+        self.canvas_prods.bind('<Configure>', ajustar_ancho)
+        # --------------------------------------------------------------------------------
+
+        # cargar categorias
         self.cargar_categorias()
 
     def toggle_admin_login(self):
@@ -114,7 +150,7 @@ class sellerApp:
             self.frame_admin_login.pack_forget()
             self.admin_panel_visible = False
 
-    # valida al admin
+    # validar admin
     def abrir_panel_admin(self):
         password = self.entry_admin_pass.get().strip()
         if controller.validar_login("ADMIN", password): 
@@ -134,24 +170,25 @@ class sellerApp:
 
         for i, cat in enumerate(cats):
             btn = tk.Button(self.frame_cats, text=cat['nombre_categoria'], 
-                            bg="#E5A586", font=("Arial", 10, "bold"),
+                            bg="#E5A586", font=("Arial", 11, "bold"), 
                             command=lambda id_c=cat['id_categorias']: self.cargar_productos(id_c))
-            btn.pack(side="left", fill="y", padx=2, ipady=5)
+            btn.pack(side="left", fill="y", padx=3, ipady=6) 
             if i == 0: self.cargar_productos(cat['id_categorias'])
 
     def cargar_productos(self, id_categoria):
+        # limpiar productos
         for w in self.frame_prods.winfo_children(): w.destroy()
         productos = controller.obtener_productos_por_categoria(id_categoria)
         
         row, col = 0, 0
-        max_cols = 4 
+        max_cols = 5 
 
         for prod in productos:
             texto = f"{prod['nombre']}\n\n${prod['precio']}"
             btn = tk.Button(self.frame_prods, text=texto, bg="#D6BFA8",
-                            width=15, height=5, wraplength=120, font=("Arial", 9, "bold"),
+                            width=18, height=6, wraplength=150, font=("Arial", 10, "bold"), 
                             command=lambda p=prod: self.agregar_al_ticket(p))
-            btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
+            btn.grid(row=row, column=col, padx=8, pady=8, sticky="nsew") 
 
             col += 1
             if col >= max_cols:
@@ -159,20 +196,32 @@ class sellerApp:
                 row += 1
         
         for i in range(max_cols): self.frame_prods.columnconfigure(i, weight=1)
+        
+        # actualizar scroll
+        self.frame_prods.update_idletasks()
+        self.canvas_prods.config(scrollregion=self.canvas_prods.bbox("all"))
+
 
     def agregar_al_ticket(self, producto):
         es_modificable = (producto.get('id_categoria') in [4, 5] and producto.get('cant_top', 0) > 0)
         
+        # Asegurarse de que el precio sea Decimal para cálculos
+        try:
+            precio_decimal = Decimal(str(producto['precio']))
+        except InvalidOperation:
+            messagebox.showerror("Error de Precio", f"El precio del producto '{producto['nombre']}' no es válido.")
+            return
+
         if es_modificable:
             self.mostrar_panel_topings(producto)
         else:
             item_venta = {
                 'id_prod': producto['id_producto'],
                 'nombre': producto['nombre'],
-                'precio': producto['precio'],
-                'precio_unitario': producto['precio'],
+                'precio': precio_decimal, # Guardado como Decimal
+                'precio_unitario': precio_decimal, # Guardado como Decimal
                 'cantidad': 1,
-                'total': producto['precio'],
+                'total': precio_decimal, # Guardado como Decimal
                 'toppings': [],
                 'toppings_str': "",
                 'producto_descripcion': producto['nombre']
@@ -182,7 +231,6 @@ class sellerApp:
 
     def mostrar_panel_topings(self, producto):
         cant_max = producto.get('cant_top', 0)
-        # Usamos la nueva función del controller
         toppings_disp = controller.obtener_toppings_habilitados() 
         
         if cant_max == 0 or not toppings_disp:
@@ -191,45 +239,63 @@ class sellerApp:
 
         win = tk.Toplevel(self.root)
         win.title(f"Toppings para {producto['nombre']} (Máx. {cant_max})")
-        win.geometry("400x600")
+        win.geometry("500x650") 
         win.transient(self.root)
         win.grab_set()
 
-        tk.Label(win, text=f"Selecciona hasta {cant_max} toppings:", font=("Arial", 12, "bold")).pack(pady=10)
+        tk.Label(win, text=f"Selecciona hasta {cant_max} toppings:", font=("Arial", 14, "bold")).pack(pady=15) 
         
         scroll_frame = tk.Frame(win)
-        scroll_frame.pack(fill="both", expand=True, padx=20, pady=5)
+        scroll_frame.pack(fill="both", expand=True, padx=30, pady=10) 
         
-        selected_toppings = {} # {id_top: tk.IntVar}
+        selected_toppings = {} 
         selected_count = tk.IntVar(value=0)
         
-        content_frame = tk.Frame(scroll_frame)
-        content_frame.pack(fill="both", expand=True)
+        # canvas para scroll
+        canvas = tk.Canvas(scroll_frame)
+        scrollbar = ttk.Scrollbar(scroll_frame, orient="vertical", command=canvas.yview)
+        
+        content_frame = tk.Frame(canvas)
+
+        content_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        window_id = canvas.create_window((0, 0), window=content_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # ajustar ancho
+        def ajustar_ancho_top(event):
+            canvas.itemconfig(window_id, width=event.width)
+        canvas.bind('<Configure>', ajustar_ancho_top)
 
         def actualizar_conteo(id_top):
             current_count = selected_count.get()
             if selected_toppings[id_top].get() == 1:
-                # Si marca
+                # si marca
                 if current_count >= cant_max:
                     messagebox.showwarning("Límite Alcanzado", f"Solo puedes seleccionar {cant_max} toppings.", parent=win)
-                    selected_toppings[id_top].set(0) # Revierte
+                    selected_toppings[id_top].set(0) # revertir
                 else:
                     selected_count.set(current_count + 1)
             else:
-                # Si desmarca
+                # si desmarca
                 selected_count.set(current_count - 1)
 
-        # Crear Checkbuttons para cada topping
+        # checkbuttons
         for top in toppings_disp:
             var = tk.IntVar(value=0)
             selected_toppings[top['id_top']] = var
             
             chk = tk.Checkbutton(content_frame, text=top['nombre'], variable=var, 
-                                 font=("Arial", 11), anchor="w", width=30)
+                                 font=("Arial", 12), anchor="w", width=40) 
             
             chk.config(command=lambda id_t=top['id_top']: actualizar_conteo(id_t))
             
-            chk.pack(fill="x", pady=2)
+            chk.pack(fill="x", pady=3) 
 
         def confirmar_seleccion():
             if selected_count.get() == 0 and cant_max > 0:
@@ -244,21 +310,27 @@ class sellerApp:
                     nombre = next(t['nombre'] for t in toppings_disp if t['id_top'] == id_top)
                     toppings_final.append(id_top)
                     toppings_nombres.append(nombre)
-
-            # Construye el item de venta
             toppings_str_final = ", ".join(toppings_nombres)
             desc_completa = producto['nombre'] + (f" ({toppings_str_final})" if toppings_nombres else "")
+
+            # Asegurarse de que el precio sea Decimal
+            try:
+                precio_decimal = Decimal(str(producto['precio']))
+            except InvalidOperation:
+                messagebox.showerror("Error de Precio", f"El precio del producto '{producto['nombre']}' no es válido.")
+                win.destroy()
+                return
 
             item_venta = {
                 'id_prod': producto['id_producto'],
                 'nombre': producto['nombre'],
-                'precio': producto['precio'],
-                'precio_unitario': producto['precio'],
+                'precio': precio_decimal, # Guardado como Decimal
+                'precio_unitario': precio_decimal, # Guardado como Decimal
                 'cantidad': 1,
-                'total': producto['precio'], 
+                'total': precio_decimal, # Guardado como Decimal
                 'toppings': toppings_final,
                 'toppings_str': toppings_str_final,
-                'producto_descripcion': desc_completa # Descripción para la BD y la vista
+                'producto_descripcion': desc_completa 
             }
             
             self.carrito_items.append(item_venta)
@@ -267,21 +339,18 @@ class sellerApp:
 
 
         tk.Button(win, text="✅ Confirmar Selección", bg="#32CD32", fg="white", 
-                  font=("Arial", 11, "bold"), command=confirmar_seleccion).pack(pady=15)
+                  font=("Arial", 12, "bold"), command=confirmar_seleccion).pack(pady=20) 
 
     def _actualizar_vista_ticket(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
             
-        total_acumulado = 0
-        
-        # Recarga los items del carrito y calcula el total
+        total_acumulado = Decimal(0) # Iniciar con Decimal(0)
         for item in self.carrito_items:
-            # item['producto_descripcion'] contiene Nombre + (Toppings)
-            
+            # item['total'] ya es Decimal
             self.tree.insert("", "end", values=(
                 item['cantidad'], 
-                item['producto_descripcion'], # Muestra la descripción completa
+                item['producto_descripcion'],
                 f"{item['total']:.2f}"
             ))
 
@@ -298,15 +367,10 @@ class sellerApp:
         if not seleccion:
             messagebox.showwarning("Atención", "Selecciona un artículo para borrar.")
             return
-
-        # Obtiene el índice del item seleccionado
         item_index = self.tree.index(seleccion)
-
-        # Elimina el item de la lista de datos reales (carrito_items)
         if 0 <= item_index < len(self.carrito_items):
             del self.carrito_items[item_index]
-        
-        # Actualiza la vista
+
         self._actualizar_vista_ticket()
         
     def procesar_pago(self):
@@ -314,26 +378,105 @@ class sellerApp:
             messagebox.showwarning("Atención", "El carrito está vacío. Agrega productos para pagar.")
             return
 
+        # El total es la suma de los Decimals en carrito_items
         total_venta = sum(item['total'] for item in self.carrito_items)
         
-        if not messagebox.askyesno("Confirmar Pago", 
-                                   f"¿Confirmar el pago por un TOTAL de ${total_venta:.2f}?", 
-                                   parent=self.root):
-            return
+        # popup pago/cambio
+        self.mostrar_popup_pago(total_venta)
+
+    def mostrar_popup_pago(self, total_venta):
         
-        # Prepara los datos del carrito para el controlador
+        win_pago = tk.Toplevel(self.root)
+        win_pago.title("Procesar Pago")
+        win_pago.geometry("350x250")
+        win_pago.config(bg="#FFF8F0")
+        win_pago.transient(self.root)
+        win_pago.grab_set()
+
+        tk.Label(win_pago, text=f"Total a Pagar: ${total_venta:.2f}", 
+                 font=("Arial", 16, "bold"), bg="#FFF8F0").pack(pady=15)
+
+        tk.Label(win_pago, text="Monto Recibido:", font=("Arial", 12), bg="#FFF8F0").pack()
+        entry_pago = tk.Entry(win_pago, font=("Arial", 14), justify='right')
+        entry_pago.pack(pady=5, padx=20)
+        entry_pago.focus()
+        
+        # validar numeros
+        vcmd = (win_pago.register(self.validar_decimal), '%P')
+        entry_pago.config(validate='key', validatecommand=vcmd)
+
+
+        lbl_cambio = tk.Label(win_pago, text="Cambio: $0.00", font=("Arial", 14, "bold"), bg="#FFF8F0", fg="#DC143C")
+        lbl_cambio.pack(pady=10)
+
+        def calcular_cambio(*args):
+            try:
+                # Convertir el monto de la caja de texto a Decimal
+                monto_recibido = Decimal(entry_pago.get() or 0)
+            except InvalidOperation:
+                monto_recibido = Decimal(0)
+
+            # total_venta ya es Decimal, así que la resta es válida.
+            if monto_recibido < total_venta:
+                lbl_cambio.config(text="Falta Monto", fg="#DC143C")
+                btn_confirmar.config(state=tk.DISABLED)
+            else:
+                cambio = monto_recibido - total_venta
+                lbl_cambio.config(text=f"Cambio: ${cambio:.2f}", fg="#32CD32")
+                btn_confirmar.config(state=tk.NORMAL)
+
+        entry_pago.bind("<KeyRelease>", calcular_cambio)
+        
+        def confirmar_transaccion():
+            try:
+                # Convertir a Decimal para la operación final
+                monto_recibido = Decimal(entry_pago.get())
+            except InvalidOperation:
+                 messagebox.showerror("Error", "Monto de pago no válido.")
+                 return
+
+            cambio = monto_recibido - total_venta
+            
+            # si el pago cubre el total
+            if cambio >= 0:
+                self.registrar_transaccion(win_pago, total_venta, cambio)
+
+        btn_confirmar = tk.Button(win_pago, text="Confirmar Venta", bg="#32CD32", fg="white", 
+                                  font=("Arial", 11, "bold"), command=confirmar_transaccion, state=tk.DISABLED)
+        btn_confirmar.pack(pady=15)
+        
+        # chequeo inicial
+        calcular_cambio()
+    
+    def validar_decimal(self, P):
+        """permite solo números y un punto decimal."""
+        if P == "": return True 
+        try:
+            # Usar Decimal para validar, que es más estricto que float
+            Decimal(P) 
+            return True
+        except InvalidOperation:
+            return False
+
+    def registrar_transaccion(self, win_pago, total_venta, cambio):
         detalles = []
         for item in self.carrito_items:
             detalles.append({
                 'id_prod': item['id_prod'],
                 'cantidad': item['cantidad'],
-                'precio_unitario': item['precio'], # El precio unitario base
+                # Convertir Decimal a float (o str) si el controller/DB no maneja Decimals. 
+                # Si la base de datos sí maneja precisión, deja item['precio'].
+                'precio_unitario': float(item['precio']), 
                 'producto_descripcion': item['producto_descripcion']
             })
 
-        # Registrar la venta usando el ID del vendedor y el total final
-        if controller.registrar_venta(self.id_vendedor, detalles, total_venta):
-            messagebox.showinfo("Éxito", "Venta registrada correctamente.")
+        # Convertir total_venta y cambio a float para pasarlos al controller si es necesario
+        total_venta_float = float(total_venta)
+        
+        if controller.registrar_venta(self.id_vendedor, detalles, total_venta_float):
+            messagebox.showinfo("Éxito", f"Venta registrada correctamente.\nCambio a dar: ${cambio:.2f}")
             self.limpiar_ticket()
+            win_pago.destroy()
         else:
             messagebox.showerror("Error", "Error al registrar la venta en la base de datos.")
+            win_pago.destroy()

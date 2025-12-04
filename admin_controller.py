@@ -1,5 +1,5 @@
 from conexion import crear_conexion
-
+from datetime import datetime, timedelta # IMPORTADO
 
 """Toppings"""
 
@@ -221,6 +221,9 @@ def actualizar_producto(id_prod, nombre, descripcion, precio, cant_top, categori
     except Exception as e:
         print(f"Error al actualizar producto: {e}")
         return False
+        
+""" Reportes """
+
 def obtener_reporte_ventas_agrupadas():
     """
     Obtiene los reportes consultando las tablas Maestro y Detalle.
@@ -280,4 +283,62 @@ def obtener_reporte_ventas_agrupadas():
 
     except Exception as e:
         print(f"Error al obtener reporte de ventas (Maestro-Detalle): {e}")
-        return []        
+        return []     
+        
+def obtener_resumen_ventas():
+    """Calcula el total de ventas y el número total de transacciones (Histórico)."""
+    conexion = crear_conexion()
+    if not conexion: return {'total_ventas': 0.0, 'total_transacciones': 0}
+    
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        # Suma total de todas las ventas
+        sql_total = "SELECT SUM(total_final) as total_ventas, COUNT(id_maestro) as total_transacciones FROM ventas_maestro"
+        cursor.execute(sql_total)
+        resumen = cursor.fetchone()
+        
+        conexion.close()
+        
+        return {
+            'total_ventas': resumen['total_ventas'] if resumen['total_ventas'] is not None else 0.0,
+            'total_transacciones': resumen['total_transacciones'] if resumen['total_transacciones'] is not None else 0
+        }
+    except Exception as e:
+        print(f"Error al obtener resumen de ventas: {e}")
+        return {'total_ventas': 0.0, 'total_transacciones': 0}
+
+def obtener_producto_mas_vendido_semana():
+    """Obtiene el producto con mayor cantidad vendida en los últimos 7 días."""
+    conexion = crear_conexion()
+    if not conexion: return None
+    
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        # Fecha de hace 7 días
+        hace_una_semana = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        sql_mas_vendido = """
+            SELECT 
+                vd.descripcion_detalle, 
+                SUM(vd.cantidad) as cantidad_total
+            FROM 
+                ventas_detalle vd
+            JOIN 
+                ventas_maestro vm ON vd.id_maestro = vm.id_maestro
+            WHERE 
+                vm.fecha >= %s
+            GROUP BY 
+                vd.descripcion_detalle
+            ORDER BY 
+                cantidad_total DESC
+            LIMIT 1
+        """
+        cursor.execute(sql_mas_vendido, (hace_una_semana,))
+        resultado = cursor.fetchone()
+        
+        conexion.close()
+        return resultado
+        
+    except Exception as e:
+        print(f"Error al obtener producto más vendido: {e}")
+        return None

@@ -65,15 +65,12 @@ def obtener_toppings_habilitados():
         return []
 
 def registrar_venta(id_vendedor, detalles_carrito, total_final):
-    # registra la venta en l atbal maestra
     conexion = crear_conexion()
     if not conexion: 
         return False
     
     try:
         cursor = conexion.cursor()
-        
-        # 1. PREPARAR DATOS MAESTROS (Usando DATETIME para fecha/hora)
         ahora = datetime.datetime.now()
         fecha_hora_actual = ahora.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -84,11 +81,9 @@ def registrar_venta(id_vendedor, detalles_carrito, total_final):
             VALUES (%s, %s, %s)
         """
         cursor.execute(sql_maestro, (id_vendedor, total_final, fecha_hora_actual))
-        
-        # Obtener el ID que se acaba de generar para el ticket
         id_maestro = cursor.lastrowid
 
-        # 3. INSERTAR EN VENTAS_DETALLE (Líneas de Producto)
+        # insercion en la tabla detalles
         sql_detalle = """
             INSERT INTO ventas_detalle (id_maestro, id_producto, cantidad, precio_unitario, descripcion_detalle) 
             VALUES (%s, %s, %s, %s, %s)
@@ -100,7 +95,7 @@ def registrar_venta(id_vendedor, detalles_carrito, total_final):
                 item['id_prod'],
                 item['cantidad'],
                 item['precio_unitario'],
-                item['producto_descripcion'] # Nombre + Toppings
+                item['producto_descripcion'] 
             ))
 
         conexion.commit()
