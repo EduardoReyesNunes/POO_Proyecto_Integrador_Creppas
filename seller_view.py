@@ -6,13 +6,20 @@ import seller_controller as controller
 import admin_view
 from decimal import Decimal, InvalidOperation # Importar Decimal para manejo de moneda
 
+# Colores Suaves (Mantenidos desde admin_view para consistencia)
+COLOR_MAIN_BG = "#EAE4D9"      
+COLOR_SIDEBAR_BG = "#F8F4E8"   
+COLOR_BTN_BASE = "#E5A586"     # Naranja/Marrón para botones principales
+COLOR_BTN_PAGAR = "#3CB371"    # Verde Suave para pagar
+COLOR_TEXT_DARK = "#4A403F"    
+
 class sellerApp: 
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de Punto de Venta")
         self.root.geometry("1000x700")
         self.root.state('zoomed') # pantalla completa
-        self.bg_color = "#E0C9B6"
+        self.bg_color = COLOR_MAIN_BG # Usar el color principal
         self.root.configure(bg=self.bg_color)
         self.usuario_actual = "Alexa"
         self.admin_panel_visible = False
@@ -20,6 +27,13 @@ class sellerApp:
         self.carrito_items = []
         # cargar iconos
         self.cargar_imagenes()
+        
+        # Aplicar estilo ttk moderno (Para Treeview)
+        style = ttk.Style()
+        try:
+             style.theme_use('adapta') 
+        except Exception:
+             style.theme_use('clam')
 
         # iniciar ui
         self.construir_interfaz_ventas() 
@@ -41,22 +55,27 @@ class sellerApp:
         self.root.columnconfigure(1, weight=7)
         self.root.rowconfigure(0, weight=1)
 
-        # --- PANEL TICKET ---
-        self.panel_izq = tk.Frame(self.root, bg="#D6BFA8", bd=2, relief=tk.RIDGE)
-        self.panel_izq.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        # --- PANEL TICKET (IZQUIERDA) ---
+        self.panel_izq = tk.Frame(self.root, bg=COLOR_SIDEBAR_BG, bd=0, relief=tk.FLAT)
+        self.panel_izq.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
 
         # botones ticket
-        frame_btns = tk.Frame(self.panel_izq, bg="#D6BFA8")
+        frame_btns = tk.Frame(self.panel_izq, bg=COLOR_SIDEBAR_BG)
         frame_btns.pack(fill="x", pady=10)
-        estilo = {"bg": "#E5A586", "font": ("Arial", 11, "bold"), "width": 10} 
+        
+        # Estilo base para todos los botones, EXCLUYENDO BG
+        estilo_base = {"fg": "white", "font": ("Arial", 11, "bold"), "width": 10, "bd": 0} 
 
-        tk.Button(frame_btns, text="PAGAR", **estilo, command=self.procesar_pago).pack(side="left", padx=5, expand=True)
-        tk.Button(frame_btns, text="BORRAR", **estilo, command=self.borrar_item_ticket).pack(side="left", padx=5, expand=True)
-        tk.Button(frame_btns, text="LIMPIAR", **estilo, command=self.limpiar_ticket).pack(side="left", padx=5, expand=True)
+        # PAGAR: Pasa su propio BG
+        tk.Button(frame_btns, text="PAGAR", bg=COLOR_BTN_PAGAR, **estilo_base, command=self.procesar_pago).pack(side="left", padx=5, expand=True)
+        # BORRAR: Pasa BG desde COLOR_BTN_BASE
+        tk.Button(frame_btns, text="BORRAR", bg=COLOR_BTN_BASE, **estilo_base, command=self.borrar_item_ticket).pack(side="left", padx=5, expand=True)
+        # LIMPIAR: Pasa BG desde COLOR_BTN_BASE
+        tk.Button(frame_btns, text="LIMPIAR", bg=COLOR_BTN_BASE, **estilo_base, command=self.limpiar_ticket).pack(side="left", padx=5, expand=True)
 
         # tabla
         style = ttk.Style()
-        style.configure("Treeview.Heading", font=("Arial", 11, "bold"))
+        style.configure("Treeview.Heading", font=("Arial", 11, "bold"), background=COLOR_BTN_BASE, foreground="white") # Encabezado destacado
         style.configure("Treeview", font=("Arial", 10))
         
         self.tree = ttk.Treeview(self.panel_izq, columns=("cant", "desc", "importe"), show="headings")
@@ -66,51 +85,53 @@ class sellerApp:
         self.tree.column("cant", width=50, anchor="center") 
         self.tree.column("desc", width=200) 
         self.tree.column("importe", width=80, anchor="e") 
-        self.tree.pack(fill="both", expand=True, padx=5)
+        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Inicializar el total como Decimal(0) para consistencia
-        self.lbl_total = tk.Label(self.panel_izq, text="TOTAL: $0.00", font=("Arial", 30, "bold"), bg="#D6BFA8") 
+        # Total
+        self.lbl_total = tk.Label(self.panel_izq, text="TOTAL: $0.00", font=("Arial", 30, "bold"), bg=COLOR_SIDEBAR_BG, fg=COLOR_TEXT_DARK) 
         self.lbl_total.pack(pady=20)
 
-        # catalogo
+        # catalogo (DERECHA)
         self.panel_der = tk.Frame(self.root, bg=self.bg_color)
-        self.panel_der.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.panel_der.grid(row=0, column=1, sticky="nsew", padx=15, pady=15)
 
         # top bar
         self.top_bar = tk.Frame(self.panel_der, bg=self.bg_color)
         self.top_bar.pack(fill="x", pady=(0, 10))
 
         # boton admin
+        btn_estilo_plano = {"bg": self.bg_color, "bd": 0, "activebackground": self.bg_color}
+        
         if self.icon_gear:
-            btn_gear = tk.Button(self.top_bar, image=self.icon_gear, bg=self.bg_color, bd=0,
+            btn_gear = tk.Button(self.top_bar, image=self.icon_gear, **btn_estilo_plano,
                                  command=self.toggle_admin_login)
         else:
-            btn_gear = tk.Button(self.top_bar, text="⚙️", font=("Arial", 16), bg=self.bg_color, 
+            btn_gear = tk.Button(self.top_bar, text="⚙️", font=("Arial", 16), **btn_estilo_plano, 
                                  command=self.toggle_admin_login)
         btn_gear.pack(side="left")
 
         # login oculto
-        self.frame_admin_login = tk.Frame(self.top_bar, bg="white", bd=1, relief="solid")
-        tk.Label(self.frame_admin_login, text="Admin Pass:", font=("Arial", 10)).pack(side="left", padx=5)
+        self.frame_admin_login = tk.Frame(self.top_bar, bg=COLOR_SIDEBAR_BG, bd=1, relief=tk.FLAT)
+        tk.Label(self.frame_admin_login, text="Admin Pass:", font=("Arial", 10), bg=COLOR_SIDEBAR_BG).pack(side="left", padx=5)
         self.entry_admin_pass = tk.Entry(self.frame_admin_login, show="*", width=12) 
         self.entry_admin_pass.pack(side="left", padx=5)
-        tk.Button(self.frame_admin_login, text="Entrar", bg="#ccc", font=("Arial", 9),
+        tk.Button(self.frame_admin_login, text="Entrar", bg=COLOR_BTN_BASE, fg="white", font=("Arial", 9, "bold"), bd=0,
                   command=self.abrir_panel_admin).pack(side="left", padx=5)
 
         # salir
-        tk.Button(self.top_bar, text="SALIR ➡️", bg="#E5A586", font=("Arial", 11, "bold"), 
-                  command=self.cerrar_sesion).pack(side="right")
+        tk.Button(self.top_bar, text="SALIR ➡️", bg=COLOR_BTN_BASE, fg="white", font=("Arial", 11, "bold"), 
+                  command=self.cerrar_sesion, bd=0).pack(side="right")
 
         # categorias
         self.frame_cats = tk.Frame(self.panel_der, bg=self.bg_color)
         self.frame_cats.pack(fill="x")
 
         # --- CONTENEDOR PRODUCTOS CON SCROLL ---
-        self.frame_prods_container = tk.Frame(self.panel_der, bg=self.bg_color, bd=2, relief=tk.SUNKEN)
+        self.frame_prods_container = tk.Frame(self.panel_der, bg=self.bg_color, bd=0, relief=tk.FLAT)
         self.frame_prods_container.pack(fill="both", expand=True, pady=5)
         
         # canvas para scroll
-        self.canvas_prods = tk.Canvas(self.frame_prods_container, bg=self.bg_color)
+        self.canvas_prods = tk.Canvas(self.frame_prods_container, bg=self.bg_color, highlightthickness=0)
         self.scrollbar_prods = ttk.Scrollbar(self.frame_prods_container, orient="vertical", command=self.canvas_prods.yview)
         
         self.frame_prods = tk.Frame(self.canvas_prods, bg=self.bg_color) # contenedor de botones
@@ -141,6 +162,46 @@ class sellerApp:
         # cargar categorias
         self.cargar_categorias()
 
+    def cargar_categorias(self):
+        cats = controller.obtener_categorias()
+        if not cats: return
+
+        for i, cat in enumerate(cats):
+            # Botones de categoría estilo modernizado
+            btn = tk.Button(self.frame_cats, text=cat['nombre_categoria'], 
+                            bg=COLOR_BTN_BASE, fg="white", bd=0,
+                            font=("Arial", 11, "bold"), 
+                            command=lambda id_c=cat['id_categorias']: self.cargar_productos(id_c))
+            btn.pack(side="left", fill="y", padx=5, ipady=8) 
+            if i == 0: self.cargar_productos(cat['id_categorias'])
+
+    def cargar_productos(self, id_categoria):
+        # limpiar productos
+        for w in self.frame_prods.winfo_children(): w.destroy()
+        productos = controller.obtener_productos_por_categoria(id_categoria)
+        
+        row, col = 0, 0
+        max_cols = 5 
+
+        for prod in productos:
+            texto = f"{prod['nombre']}\n\n${prod['precio']}"
+            # Botones de Producto estilo modernizado
+            btn = tk.Button(self.frame_prods, text=texto, bg=COLOR_SIDEBAR_BG, fg=COLOR_TEXT_DARK,
+                            width=18, height=6, wraplength=150, font=("Arial", 10, "bold"), bd=1, relief=tk.FLAT, highlightbackground=COLOR_BTN_BASE, highlightthickness=1, 
+                            command=lambda p=prod: self.agregar_al_ticket(p))
+            btn.grid(row=row, column=col, padx=10, pady=10, sticky="nsew") 
+
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+        
+        for i in range(max_cols): self.frame_prods.columnconfigure(i, weight=1)
+        
+        # actualizar scroll
+        self.frame_prods.update_idletasks()
+        self.canvas_prods.config(scrollregion=self.canvas_prods.bbox("all"))
+
     def toggle_admin_login(self):
         if not self.admin_panel_visible:
             self.frame_admin_login.pack(side="left", padx=10)
@@ -163,44 +224,6 @@ class sellerApp:
 
     def cerrar_sesion(self):
         self.root.destroy() 
-
-    def cargar_categorias(self):
-        cats = controller.obtener_categorias()
-        if not cats: return
-
-        for i, cat in enumerate(cats):
-            btn = tk.Button(self.frame_cats, text=cat['nombre_categoria'], 
-                            bg="#E5A586", font=("Arial", 11, "bold"), 
-                            command=lambda id_c=cat['id_categorias']: self.cargar_productos(id_c))
-            btn.pack(side="left", fill="y", padx=3, ipady=6) 
-            if i == 0: self.cargar_productos(cat['id_categorias'])
-
-    def cargar_productos(self, id_categoria):
-        # limpiar productos
-        for w in self.frame_prods.winfo_children(): w.destroy()
-        productos = controller.obtener_productos_por_categoria(id_categoria)
-        
-        row, col = 0, 0
-        max_cols = 5 
-
-        for prod in productos:
-            texto = f"{prod['nombre']}\n\n${prod['precio']}"
-            btn = tk.Button(self.frame_prods, text=texto, bg="#D6BFA8",
-                            width=18, height=6, wraplength=150, font=("Arial", 10, "bold"), 
-                            command=lambda p=prod: self.agregar_al_ticket(p))
-            btn.grid(row=row, column=col, padx=8, pady=8, sticky="nsew") 
-
-            col += 1
-            if col >= max_cols:
-                col = 0
-                row += 1
-        
-        for i in range(max_cols): self.frame_prods.columnconfigure(i, weight=1)
-        
-        # actualizar scroll
-        self.frame_prods.update_idletasks()
-        self.canvas_prods.config(scrollregion=self.canvas_prods.bbox("all"))
-
 
     def agregar_al_ticket(self, producto):
         es_modificable = (producto.get('id_categoria') in [4, 5] and producto.get('cant_top', 0) > 0)
@@ -290,8 +313,9 @@ class sellerApp:
             var = tk.IntVar(value=0)
             selected_toppings[top['id_top']] = var
             
+            # Checkbutton con estilo plano y fondo claro
             chk = tk.Checkbutton(content_frame, text=top['nombre'], variable=var, 
-                                 font=("Arial", 12), anchor="w", width=40) 
+                                 font=("Arial", 12), anchor="w", width=40, bg="white", bd=0, relief=tk.FLAT) 
             
             chk.config(command=lambda id_t=top['id_top']: actualizar_conteo(id_t))
             
@@ -338,7 +362,7 @@ class sellerApp:
             win.destroy()
 
 
-        tk.Button(win, text="✅ Confirmar Selección", bg="#32CD32", fg="white", 
+        tk.Button(win, text="✅ Confirmar Selección", bg=COLOR_BTN_PAGAR, fg="white", bd=0,
                   font=("Arial", 12, "bold"), command=confirmar_seleccion).pack(pady=20) 
 
     def _actualizar_vista_ticket(self):
@@ -389,14 +413,14 @@ class sellerApp:
         win_pago = tk.Toplevel(self.root)
         win_pago.title("Procesar Pago")
         win_pago.geometry("350x250")
-        win_pago.config(bg="#FFF8F0")
+        win_pago.config(bg=COLOR_SIDEBAR_BG)
         win_pago.transient(self.root)
         win_pago.grab_set()
 
         tk.Label(win_pago, text=f"Total a Pagar: ${total_venta:.2f}", 
-                 font=("Arial", 16, "bold"), bg="#FFF8F0").pack(pady=15)
+                 font=("Arial", 16, "bold"), bg=COLOR_SIDEBAR_BG).pack(pady=15)
 
-        tk.Label(win_pago, text="Monto Recibido:", font=("Arial", 12), bg="#FFF8F0").pack()
+        tk.Label(win_pago, text="Monto Recibido:", font=("Arial", 12), bg=COLOR_SIDEBAR_BG).pack()
         entry_pago = tk.Entry(win_pago, font=("Arial", 14), justify='right')
         entry_pago.pack(pady=5, padx=20)
         entry_pago.focus()
@@ -406,7 +430,7 @@ class sellerApp:
         entry_pago.config(validate='key', validatecommand=vcmd)
 
 
-        lbl_cambio = tk.Label(win_pago, text="Cambio: $0.00", font=("Arial", 14, "bold"), bg="#FFF8F0", fg="#DC143C")
+        lbl_cambio = tk.Label(win_pago, text="Cambio: $0.00", font=("Arial", 14, "bold"), bg=COLOR_SIDEBAR_BG, fg="#DC143C")
         lbl_cambio.pack(pady=10)
 
         def calcular_cambio(*args):
@@ -422,7 +446,7 @@ class sellerApp:
                 btn_confirmar.config(state=tk.DISABLED)
             else:
                 cambio = monto_recibido - total_venta
-                lbl_cambio.config(text=f"Cambio: ${cambio:.2f}", fg="#32CD32")
+                lbl_cambio.config(text=f"Cambio: ${cambio:.2f}", fg=COLOR_BTN_PAGAR)
                 btn_confirmar.config(state=tk.NORMAL)
 
         entry_pago.bind("<KeyRelease>", calcular_cambio)
@@ -441,7 +465,7 @@ class sellerApp:
             if cambio >= 0:
                 self.registrar_transaccion(win_pago, total_venta, cambio)
 
-        btn_confirmar = tk.Button(win_pago, text="Confirmar Venta", bg="#32CD32", fg="white", 
+        btn_confirmar = tk.Button(win_pago, text="Confirmar Venta", bg=COLOR_BTN_PAGAR, fg="white", bd=0,
                                   font=("Arial", 11, "bold"), command=confirmar_transaccion, state=tk.DISABLED)
         btn_confirmar.pack(pady=15)
         

@@ -1,30 +1,34 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog 
 from admin_controller import (actualizar_estatus_topping, estatus_topings, agregar_nuevo_topping, eliminar_topping_bd,
                               actualizar_nombre_topping, mostrar_productos, agregar_nuevo_producto, obtener_productos_con_id,
                               eliminar_producto_bd, actualizar_producto, obtener_reporte_ventas_agrupadas,
-                              obtener_resumen_ventas, obtener_producto_mas_vendido_semana) # NUEVAS FUNCIONES
+                              obtener_resumen_ventas, obtener_producto_mas_vendido_semana)
 from seller_controller import obtener_categorias
 import seller_view
 import re # para validación
+import pandas as pd
 
-# colores
-COLOR_SIDEBAR = "#FFF8F0"      
-COLOR_MAIN_BG = "#EADBC8"      
-COLOR_BTN_SIDEBAR = "#EADBC8"  
-COLOR_BTN_ACTIVE = "#D7C2A8"   
-COLOR_TEXT = "#594A42"         
-COLOR_BTN_GREEN = "#32CD32"    
-COLOR_BTN_RED = "#DC143C"      
-COLOR_BTN_BROWN = "#5D4037"    
+# colores (Paleta modernizada)
+COLOR_SIDEBAR = "#F8F4E8"      # Blanco cremoso
+COLOR_MAIN_BG = "#EAE4D9"      # Fondo principal
+COLOR_BTN_SIDEBAR = "#EAE4D9"  
+COLOR_BTN_ACTIVE = "#DCD6C7"   # Resaltado
+COLOR_TEXT = "#4A403F"         # Texto oscuro
+COLOR_BTN_GREEN = "#3CB371"    # Verde Suave (Medium Sea Green)
+COLOR_BTN_RED = "#D24F4F"      # Rojo Suave
+COLOR_BTN_BROWN = "#6A5340"    # Marrón cálido
+COLOR_ACCENT = "#E5A586"       # Color para botones de acción secundarios (similar al seller)
+
 
 class adminapp: 
     def __init__(self, root):
         self.root = root
         self.root.title("Panel de Administrador - Delicias & Coffee")
         self.root.geometry("1000x600")
-        self.root.state('zoomed') # pantalla completa
+        self.root.state('zoomed') 
         self.root.resizable(True, True)
         self.root.configure(bg=COLOR_MAIN_BG)
         
@@ -34,6 +38,13 @@ class adminapp:
        
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)  
+
+        # Aplicar tema ttk moderno (Para Treeview, OptionMenu, etc.)
+        style = ttk.Style()
+        try:
+             style.theme_use('adapta') 
+        except Exception:
+             style.theme_use('clam')
 
         # menu izquierda
         self.sidebar_frame = tk.Frame(self.root, bg=COLOR_SIDEBAR, width=250)
@@ -73,7 +84,7 @@ class adminapp:
         self.btn_ventas = self.botones_menu("💲 Ventas", self.mostrar_ventas) 
         self.btn_inventario = self.botones_menu("📋 C. Ingredientes", self.mostrar_inventario) 
         self.btn_productos = self.botones_menu("🍰 Productos", self.mostrar_productos)
-        self.btn_reportes = self.botones_menu("📄 Reportes", self.mostrar_reportes) # CAMBIADO para dashboard
+        self.btn_reportes = self.botones_menu("📄 Reportes", self.mostrar_reportes)
 
         # salir
         btn_salir = tk.Button(self.sidebar_frame, text="Salir al Punto de Venta", bg=COLOR_BTN_BROWN, fg="white",
@@ -93,10 +104,12 @@ class adminapp:
         
 
     def botones_menu(self, texto, comando):
-        """helper para crear botones"""
+        """helper para crear botones con estilo plano"""
         btn = tk.Button(self.sidebar_frame, text=texto, anchor="w",
                         bg=COLOR_SIDEBAR, fg=COLOR_TEXT, bd=0,
                         font=("Arial", 14), padx=25, pady=15, 
+                        # Usar highlightthickness para simular borde en activo
+                        activebackground=COLOR_BTN_ACTIVE,
                         command=comando)
         btn.pack(fill="x")
         return btn
@@ -108,17 +121,121 @@ class adminapp:
 
     def _resaltar_boton(self, boton_activo):
         """resaltar botón activo"""
-        # resetear
-        self.btn_ventas.config(bg=COLOR_SIDEBAR)
-        self.btn_inventario.config(bg=COLOR_SIDEBAR)
-        self.btn_productos.config(bg=COLOR_SIDEBAR)
-        self.btn_reportes.config(bg=COLOR_SIDEBAR)
+        # resetear: todos con fondo normal (sin highlight)
+        self.btn_ventas.config(bg=COLOR_SIDEBAR, highlightthickness=0)
+        self.btn_inventario.config(bg=COLOR_SIDEBAR, highlightthickness=0)
+        self.btn_productos.config(bg=COLOR_SIDEBAR, highlightthickness=0)
+        self.btn_reportes.config(bg=COLOR_SIDEBAR, highlightthickness=0)
         
         # marcar activo
         if boton_activo:
-            boton_activo.config(bg=COLOR_BTN_ACTIVE)
+            # Marcar con el fondo activo y un borde sutil para destacar
+            boton_activo.config(bg=COLOR_BTN_ACTIVE, highlightbackground=COLOR_TEXT, highlightthickness=1)
 
-     # paneles
+    # =========================================================================================
+    # FUNCIONALIDAD: EXPORTACIÓN A EXCEL
+    # =========================================================================================
+
+    def exportar_a_excel(self, data, sheet_name, filename):
+        """Función genérica para guardar datos (lista de diccionarios) a Excel."""
+        if not data:
+            messagebox.showwarning("Atención", "No hay datos para exportar.")
+            return
+            
+        try:
+            # Usar filedialog para que el usuario elija dónde guardar
+            filepath = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Archivos Excel", "*.xlsx")],
+                initialfile=filename
+            )
+            
+            if not filepath: 
+                return
+                
+            # Crear DataFrame de pandas y exportar
+            df = pd.DataFrame(data)
+            df.to_excel(filepath, index=False, sheet_name=sheet_name)
+            
+            messagebox.showinfo("Éxito", f"Datos exportados a:\n{filepath}")
+            
+        except ImportError:
+            messagebox.showerror("Error", "Faltan librerías: Asegúrate de instalar 'pandas' y 'openpyxl' (pip install pandas openpyxl).")
+        except Exception as e:
+            messagebox.showerror("Error", f"Fallo al exportar a Excel: {e}")
+            
+    # Función específica para aplanar el reporte de ventas agrupadas
+    def exportar_reporte_ventas_excel(self, reporte_datos):
+        """Prepara los datos de ventas agrupadas para la exportación y la ejecuta."""
+        datos_exportar = []
+        
+        for grupo in reporte_datos:
+            # Aplanar la estructura de datos: de Maestro-Detalle a filas simples para Excel
+            if not grupo['detalles']:
+                datos_exportar.append({
+                    'ID Ticket': grupo['id_ticket'],
+                    'Fecha': grupo['fecha'],
+                    'ID Vendedor': grupo['id_vendedor'],
+                    'Producto/Descripción': 'SIN DETALLE',
+                    'Cantidad': 0,
+                    'Total Linea': 0.00,
+                    'Total Venta': grupo['total_final']
+                })
+                continue
+
+            for detalle in grupo['detalles']:
+                # Intenta extraer la cantidad del string "Cantidad x Producto"
+                try:
+                    cantidad = detalle['descripcion'].split('x')[0].strip()
+                    cantidad = int(cantidad) if cantidad.isdigit() else 1
+                except:
+                    cantidad = 1
+
+                datos_exportar.append({
+                    'ID Ticket': grupo['id_ticket'],
+                    'Fecha': grupo['fecha'],
+                    'ID Vendedor': grupo['id_vendedor'],
+                    'Producto/Descripción': detalle['descripcion'],
+                    'Cantidad': cantidad,
+                    'Total Linea': detalle['total_linea'],
+                    'Total Venta': grupo['total_final'] 
+                })
+                
+        self.exportar_a_excel(datos_exportar, "VentasDetalle", "ReporteVentas.xlsx")
+
+    # Función específica para exportar productos (usa obtener_productos_con_id)
+    def exportar_productos_excel(self):
+        """Obtiene y prepara los datos de productos para exportar."""
+        productos = obtener_productos_con_id() 
+        categorias_map = {c['id_categorias']: c['nombre_categoria'] for c in obtener_categorias()}
+        
+        datos_exportar = []
+        for id_prod, nombre, descripcion, precio, cant_top, id_cat in productos:
+            datos_exportar.append({
+                'ID Producto': id_prod,
+                'Nombre': nombre,
+                'Descripción': descripcion,
+                'Precio': precio,
+                'Toppings Max': cant_top,
+                'Categoría': categorias_map.get(id_cat, 'N/A')
+            })
+            
+        self.exportar_a_excel(datos_exportar, "Productos", "CatalogoProductos.xlsx")
+        
+    # Función específica para exportar toppings
+    def exportar_toppings_excel(self):
+        """Obtiene y prepara los datos de toppings para exportar."""
+        toppings = estatus_topings()
+        datos_exportar = []
+        for id_top, nombre, habilitado in toppings:
+            datos_exportar.append({
+                'ID Topping': id_top,
+                'Nombre': nombre,
+                'Habilitado (si/no)': habilitado
+            })
+        self.exportar_a_excel(datos_exportar, "Toppings", "InventarioToppings.xlsx")
+
+    # =========================================================================================
 
     '''INVENTARIO / TOPPINGS'''
 
@@ -132,18 +249,24 @@ class adminapp:
      # botones abajo
         footer_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         footer_frame.pack(side="bottom", fill="x", pady=20, padx=30)
+        
+        # NUEVO: Exportar Toppings
+        tk.Button(footer_frame, text="📥 Exportar a Excel", 
+                            bg=COLOR_BTN_GREEN, fg="white", font=("Arial", 12, "bold"), 
+                            padx=25, pady=12, bd=0,
+                            command=self.exportar_toppings_excel).pack(side="left", padx=(0, 10))
 
         # agregar
         btn_add = tk.Button(footer_frame, text="➕ Agregar Nuevo", 
                             bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 12, "bold"), 
-                            padx=25, pady=12,
+                            padx=25, pady=12, bd=0,
                             command=self._popup_agregar_topping)
         btn_add.pack(side="right", padx=(10, 0))
 
         # funciones
         btn_funciones = tk.Button(footer_frame, text="⚙️ Funciones / Eliminar", 
-                                  bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 12, "bold"), 
-                                  padx=25, pady=12,
+                                  bg=COLOR_ACCENT, fg="white", font=("Arial", 12, "bold"), # Usar ACCENT
+                                  padx=25, pady=12, bd=0,
                                   command=self.panel_funciones)
         btn_funciones.pack(side="right")
 
@@ -208,8 +331,8 @@ class adminapp:
             valor_inicial = 1 if habilitado == "si" else 0
             var = tk.IntVar(value=valor_inicial)
             
-            # fila
-            row_frame = tk.Frame(scrollable_frame, bg="#FFF8F0")
+            # fila: Estilo modernizado, borde sutil
+            row_frame = tk.Frame(scrollable_frame, bg="#FFF8F0", bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1) 
             row_frame.pack(fill="x", pady=5, ipadx=10, ipady=5) 
 
             # nombre
@@ -224,9 +347,9 @@ class adminapp:
                 txt = "DESHABILITADO"
                 col = COLOR_BTN_RED
 
-            # boton estado
+            # boton estado: plano y sin indicador
             btn = tk.Checkbutton(row_frame, text=txt, variable=var, indicatoron=False,
-                                 bg=col, fg="white", selectcolor=COLOR_BTN_GREEN,
+                                 bg=col, fg="white", selectcolor=COLOR_BTN_GREEN, bd=0,
                                  font=("Arial", 11, "bold"), width=18, cursor="hand2") 
             
             btn.config(command=lambda b=btn, v=var, i=id_prod: click_boton(b, v, i))
@@ -271,7 +394,7 @@ class adminapp:
             else: 
                 messagebox.showerror("Error", "No se pudo guardar en la base de datos", parent=ventana_add)
 
-        tk.Button(ventana_add, text="Guardar", bg=COLOR_BTN_GREEN, fg="white",
+        tk.Button(ventana_add, text="Guardar", bg=COLOR_BTN_GREEN, fg="white", bd=0,
                   font=("Arial", 11, "bold"), command=guardar_datos).pack(pady=15)
 
     def panel_funciones(self):
@@ -281,7 +404,7 @@ class adminapp:
         header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         header_frame.pack(fill="x", pady=10)
         
-        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white",
+        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white", bd=0,
                   font=("Arial", 12, "bold"), command=self.mostrar_inventario).pack(side="left", padx=10) 
 
         tk.Label(header_frame, text="Gestión de Ingredientes", font=("Arial", 28, "bold"), 
@@ -290,10 +413,11 @@ class adminapp:
 
         style = ttk.Style()
         style.theme_use("clam")
+        # Estilo Treeview modernizado
         style.configure("Treeview", 
                         background="white", fieldbackground="white", foreground="black",
                         font=("Arial", 12), rowheight=30) 
-        style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#D7C2A8") 
+        style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background=COLOR_ACCENT, foreground="white") 
 
         # crear tabla
         frame_tabla = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
@@ -330,11 +454,11 @@ class adminapp:
         frame_botones.pack(fill="x", pady=20, padx=20)
 
         tk.Button(frame_botones, text="✏️ Editar Nombre", 
-                  bg="#FFD700", fg="black", font=("Arial", 12, "bold"), 
+                  bg="#FFD700", fg="black", font=("Arial", 12, "bold"), bd=0,
                   padx=20, pady=12, command=self.accion_actualizar).pack(side="left", padx=(0, 20))
 
         tk.Button(frame_botones, text="🗑️ Eliminar Seleccionado", 
-                  bg=COLOR_BTN_RED, fg="white", font=("Arial", 12, "bold"), 
+                  bg=COLOR_BTN_RED, fg="white", font=("Arial", 12, "bold"), bd=0,
                   padx=20, pady=12, command=self.accion_eliminar).pack(side="left")
 
      # logica de botones
@@ -396,7 +520,7 @@ class adminapp:
             else:
                 messagebox.showerror("Error", "Fallo al actualizar en BD.", parent=ventana_edit)
 
-        tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white",
+        tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white", bd=0,
                   font=("Arial", 11, "bold"), command=guardar_cambio).pack(pady=15)
 
     '''PRODUCTOS'''
@@ -426,18 +550,24 @@ class adminapp:
                  
         footer_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         footer_frame.pack(side="bottom", fill="x", pady=20, padx=30)
+        
+        # NUEVO: Exportar Productos
+        tk.Button(footer_frame, text="📥 Exportar a Excel", 
+                            bg=COLOR_BTN_GREEN, fg="white", font=("Arial", 12, "bold"),
+                            padx=25, pady=12, bd=0,
+                            command=self.exportar_productos_excel).pack(side="left", padx=(0, 10))
 
         # agregar
         btn_add_producto = tk.Button(footer_frame, text="➕ Agregar Nuevo", 
                             bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 12, "bold"),
-                            padx=25, pady=12,
+                            padx=25, pady=12, bd=0,
                             command=self._mostrar_panel_agregar_producto)
         btn_add_producto.pack(side="right", padx=(10, 0))
 
         # funciones
         btn_funciones_producto = tk.Button(footer_frame, text="⚙️ Funciones / Eliminar", 
-                                  bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 12, "bold"),
-                                  padx=25, pady=12,
+                                  bg=COLOR_ACCENT, fg="white", font=("Arial", 12, "bold"),
+                                  padx=25, pady=12, bd=0,
                                   command=self.panel_funciones_producto)
         btn_funciones_producto.pack(side="right")
 
@@ -512,7 +642,8 @@ class adminapp:
         
         
         for nombre, descripcion, precio, cant_top in productos_a_mostrar:
-            row_frame = tk.Frame(self.scrollable_frame_prods, bg="#FFF8F0")
+            # fila: Estilo modernizado, borde sutil
+            row_frame = tk.Frame(self.scrollable_frame_prods, bg="#FFF8F0", bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1)
             # fila
             row_frame.pack(fill="x", pady=5, ipadx=10, ipady=5) 
             tk.Label(row_frame, text=nombre, font=("Arial", 14, "bold"), width=15, anchor="w", 
@@ -536,7 +667,7 @@ class adminapp:
         header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         header_frame.pack(fill="x", pady=10)
         
-        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white",
+        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white", bd=0,
                   font=("Arial", 12, "bold"), command=self.mostrar_productos).pack(side="left", padx=10) 
 
         tk.Label(header_frame, text="➕ Agregar Nuevo Producto", font=("Arial", 28, "bold"), 
@@ -544,7 +675,8 @@ class adminapp:
         
         ttk.Separator(self.main_frame, orient="horizontal").pack(fill="x", padx=30)
         
-        form_frame = tk.Frame(self.main_frame, bg=COLOR_SIDEBAR, padx=40, pady=30) 
+        # Frame de formulario con borde sutil para destacar la tarjeta
+        form_frame = tk.Frame(self.main_frame, bg=COLOR_SIDEBAR, padx=40, pady=30, bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1) 
         form_frame.pack(fill="both", expand=True, padx=40, pady=30)
         form_frame.grid_columnconfigure(0, weight=1)
         form_frame.grid_columnconfigure(1, weight=3)
@@ -611,7 +743,7 @@ class adminapp:
         # mostrar/ocultar al inicio
         _mostrar_campo_topings() 
 
-        tk.Button(self.main_frame, text="💾 Guardar Producto", bg=COLOR_BTN_GREEN, fg="white",
+        tk.Button(self.main_frame, text="💾 Guardar Producto", bg=COLOR_BTN_GREEN, fg="white", bd=0,
                   font=("Arial", 13, "bold"), command=self.guardar_datos_prod).pack(pady=30)
         
     def guardar_datos_prod(self):
@@ -655,7 +787,7 @@ class adminapp:
         header_frame = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
         header_frame.pack(fill="x", pady=10)
         
-        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white",
+        tk.Button(header_frame, text="⬅ Volver", bg=COLOR_BTN_BROWN, fg="white", bd=0,
                   font=("Arial", 12, "bold"), command=self.mostrar_productos).pack(side="left", padx=10) 
 
         tk.Label(header_frame, text="Gestión de Productos", font=("Arial", 28, "bold"), 
@@ -667,7 +799,7 @@ class adminapp:
         style.configure("Treeview", 
                         background="white", fieldbackground="white", foreground="black",
                         font=("Arial", 12), rowheight=30) 
-        style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#D7C2A8") 
+        style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background=COLOR_ACCENT, foreground="white") 
 
         # crear tabla
         frame_tabla = tk.Frame(self.main_frame, bg=COLOR_MAIN_BG)
@@ -710,11 +842,11 @@ class adminapp:
         frame_botones.pack(fill="x", pady=20, padx=20)
 
         tk.Button(frame_botones, text="✏️ Editar datos", 
-                  bg="#FFD700", fg="black", font=("Arial", 12, "bold"), 
+                  bg="#FFD700", fg="black", font=("Arial", 12, "bold"), bd=0,
                   padx=20, pady=12, command=self.accion_actualizar_producto).pack(side="left", padx=(0, 20))
 
         tk.Button(frame_botones, text="🗑️ Eliminar Seleccionado", 
-                  bg=COLOR_BTN_RED, fg="white", font=("Arial", 12, "bold"), 
+                  bg=COLOR_BTN_RED, fg="white", font=("Arial", 12, "bold"), bd=0,
                   padx=20, pady=12, command=self.accion_eliminar_producto).pack(side="left")
 
     def accion_eliminar_producto(self):
@@ -836,7 +968,7 @@ class adminapp:
             else:
                 messagebox.showerror("Error", "Fallo al actualizar en la Base de Datos.", parent=ventana_edit)
 
-        tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white",
+        tk.Button(ventana_edit, text="💾 Guardar Cambios", bg=COLOR_BTN_GREEN, fg="white", bd=0,
                   font=("Arial", 12, "bold"), command=guardar_cambio_prod).pack(pady=25)
     
     '''VENTAS'''
@@ -896,12 +1028,17 @@ class adminapp:
         frame_botones.pack(fill="x", pady=20, padx=20)
         
         tk.Button(frame_botones, text="🔍 Ver Detalles de Venta Seleccionada", 
-                bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 11, "bold"),
+                bg=COLOR_ACCENT, fg="white", font=("Arial", 11, "bold"), bd=0,
                 padx=15, pady=10, command=lambda: self.mostrar_detalles_venta(reporte_datos)).pack(side="left")
+        
+        # NUEVO: Botón para Exportar a Excel
+        tk.Button(frame_botones, text="📥 Exportar a Excel",
+                bg=COLOR_BTN_GREEN, fg="white", font=("Arial", 11, "bold"), bd=0,
+                padx=15, pady=10, command=lambda: self.exportar_reporte_ventas_excel(reporte_datos)).pack(side="left", padx=15)
         
         # Botón para refrescar
         tk.Button(frame_botones, text="🔄 Actualizar Lista", 
-                bg="#5D4037", fg="white", font=("Arial", 11, "bold"),
+                bg="#5D4037", fg="white", font=("Arial", 11, "bold"), bd=0,
                 padx=15, pady=10, command=self.mostrar_ventas).pack(side="right")
 
     def mostrar_detalles_venta(self, reporte_datos):
@@ -938,16 +1075,16 @@ class adminapp:
         tk.Label(ventana_detalles, text=f"Ticket #{id_ticket}", 
                 font=("Arial", 18, "bold"), bg=COLOR_MAIN_BG, fg=COLOR_TEXT).pack(pady=10)
         
-        # Información general
-        info_frame = tk.Frame(ventana_detalles, bg="#FFF8F0", padx=15, pady=10)
+        # Información general: Estilo modernizado
+        info_frame = tk.Frame(ventana_detalles, bg=COLOR_SIDEBAR, padx=15, pady=10, bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1)
         info_frame.pack(fill="x", padx=20, pady=5)
         
         tk.Label(info_frame, text=f"Fecha: {grupo['fecha']}", 
-                font=("Arial", 12), bg="#FFF8F0", fg=COLOR_TEXT, anchor="w").pack(fill="x", pady=2)
+                font=("Arial", 12), bg=COLOR_SIDEBAR, fg=COLOR_TEXT, anchor="w").pack(fill="x", pady=2)
         tk.Label(info_frame, text=f"Vendedor ID: {grupo['id_vendedor']}", 
-                font=("Arial", 12), bg="#FFF8F0", fg=COLOR_TEXT, anchor="w").pack(fill="x", pady=2)
+                font=("Arial", 12), bg=COLOR_SIDEBAR, fg=COLOR_TEXT, anchor="w").pack(fill="x", pady=2)
         tk.Label(info_frame, text=f"Total: ${grupo['total_final']:.2f}", 
-                font=("Arial", 14, "bold"), bg="#FFF8F0", fg="#DC143C", anchor="w").pack(fill="x", pady=5)
+                font=("Arial", 14, "bold"), bg=COLOR_SIDEBAR, fg=COLOR_BTN_RED, anchor="w").pack(fill="x", pady=5)
         
         # Separador
         ttk.Separator(ventana_detalles, orient="horizontal").pack(fill="x", padx=20, pady=10)
@@ -979,26 +1116,27 @@ class adminapp:
         
         # Mostrar cada detalle de producto
         for detalle in grupo['detalles']:
-            # Frame para cada producto
-            prod_frame = tk.Frame(detalle_frame, bg="#FFF8F0", bd=1, relief=tk.GROOVE)
+            # Frame para cada producto: Estilo modernizado
+            prod_frame = tk.Frame(detalle_frame, bg=COLOR_SIDEBAR, bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1)
             prod_frame.pack(fill="x", pady=3, padx=5)
             
             # Descripción del producto
             desc_label = tk.Label(prod_frame, text=detalle['descripcion'], 
-                                font=("Arial", 11), bg="#FFF8F0", fg=COLOR_TEXT,
+                                font=("Arial", 11), bg=COLOR_SIDEBAR, fg=COLOR_TEXT,
                                 anchor="w", justify="left", wraplength=400)
-            desc_label.pack(fill="x", padx=10, pady=5)
+            desc_label.pack(side="left", fill="x", padx=10, pady=5)
             
             # Total de la línea
             total_label = tk.Label(prod_frame, text=f"${detalle['total_linea']:.2f}", 
-                                font=("Arial", 11, "bold"), bg="#FFF8F0", fg="#5D4037")
+                                font=("Arial", 11, "bold"), bg=COLOR_SIDEBAR, fg="#5D4037")
             total_label.pack(side="right", padx=10, pady=5)
         
         # Botón para cerrar
-        tk.Button(ventana_detalles, text="Cerrar", bg=COLOR_BTN_BROWN, fg="white",
+        tk.Button(ventana_detalles, text="Cerrar", bg=COLOR_BTN_BROWN, fg="white", bd=0,
                 font=("Arial", 11, "bold"), padx=30, pady=8,
                 command=ventana_detalles.destroy).pack(pady=15)
 
+    '''REPORTES'''
     def mostrar_reportes(self):
         self._limpiar_panel_principal()
         self._resaltar_boton(self.btn_reportes)
@@ -1019,7 +1157,7 @@ class adminapp:
 
         # Botón para Recargar/Actualizar
         tk.Button(self.main_frame, text="🔄 Recargar Datos", 
-                  command=self.cargar_dashboard_reportes, 
+                  command=self.cargar_dashboard_reportes, bd=0,
                   bg=COLOR_BTN_BROWN, fg="white", font=("Arial", 10, "bold")).pack(pady=10)
 
     def cargar_dashboard_reportes(self):
@@ -1032,8 +1170,8 @@ class adminapp:
         resumen = obtener_resumen_ventas()
         mas_vendido = obtener_producto_mas_vendido_semana()
 
-        # --- Card 1: Venta Total (Histórica) ---
-        card_total = tk.Frame(self.frame_dashboard, bg="#A0D8B3", bd=2, relief=tk.RAISED) # Verde claro
+        # --- Card 1: Venta Total (Histórica) --- (Estilo modernizado: FLAT con highlight)
+        card_total = tk.Frame(self.frame_dashboard, bg="#A0D8B3", bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1) 
         card_total.pack(side="left", padx=10, expand=True, fill="x")
         
         tk.Label(card_total, text="💰 VENTA TOTAL (Histórica)", font=("Arial", 12, "bold"), 
@@ -1043,8 +1181,8 @@ class adminapp:
         tk.Label(card_total, text=total_str, font=("Arial", 28, "bold"), 
                  bg="#A0D8B3", fg=COLOR_TEXT).pack(pady=(0, 10))
 
-        # --- Card 2: Total Transacciones (Histórica) ---
-        card_transacciones = tk.Frame(self.frame_dashboard, bg="#ADD8E6", bd=2, relief=tk.RAISED) # Azul claro
+        # --- Card 2: Total Transacciones (Histórica) --- (Estilo modernizado: FLAT con highlight)
+        card_transacciones = tk.Frame(self.frame_dashboard, bg="#ADD8E6", bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1) 
         card_transacciones.pack(side="left", padx=10, expand=True, fill="x")
         
         tk.Label(card_transacciones, text="🧾 Total Transacciones", font=("Arial", 12, "bold"), 
@@ -1053,8 +1191,8 @@ class adminapp:
         tk.Label(card_transacciones, text=f"{resumen['total_transacciones']}", font=("Arial", 28, "bold"), 
                  bg="#ADD8E6", fg=COLOR_TEXT).pack(pady=(0, 10))
 
-        # --- Card 3: Producto Más Vendido (Última Semana) ---
-        card_mas_vendido = tk.Frame(self.frame_dashboard, bg="#FFD700", bd=2, relief=tk.RAISED) # Dorado/Amarillo
+        # --- Card 3: Producto Más Vendido (Última Semana) --- (Estilo modernizado: FLAT con highlight)
+        card_mas_vendido = tk.Frame(self.frame_dashboard, bg="#FFD700", bd=0, relief=tk.FLAT, highlightbackground=COLOR_BTN_ACTIVE, highlightthickness=1) 
         card_mas_vendido.pack(side="left", padx=10, expand=True, fill="x")
         
         nombre_prod = mas_vendido['descripcion_detalle'] if mas_vendido else "Ninguno"
@@ -1068,3 +1206,9 @@ class adminapp:
                  
         tk.Label(card_mas_vendido, text=f"({int(cantidad_prod)} unidades)", font=("Arial", 10, "italic"), 
                  bg="#FFD700", fg=COLOR_TEXT).pack(pady=(0, 10))
+                 
+        # Botón para Exportar Reporte Semanal
+        btn_exportar_semanal = tk.Button(self.frame_detalles_reporte, text="📥 Exportar Resumen Semanal",
+                                        bg=COLOR_BTN_GREEN, fg="white", font=("Arial", 11, "bold"), bd=0,
+                                        command=lambda: self.exportar_a_excel([mas_vendido] if mas_vendido else [], "ProductoMasVendido", "ReporteSemanal.xlsx"))
+        btn_exportar_semanal.pack(pady=20)
