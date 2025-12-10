@@ -35,6 +35,8 @@ class adminapp:
         # registro de validaciones
         self.vcmd_precio = (self.root.register(self.validar_decimal), '%P')
         self.vcmd_entero = (self.root.register(self.validar_entero), '%P')
+        # NUEVA VALIDACIÓN: Texto sin números
+        self.vcmd_texto = (self.root.register(self.validar_texto_sin_numeros), '%P')
        
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)  
@@ -70,6 +72,12 @@ class adminapp:
         """permite solo enteros."""
         if P == "": return True 
         return P.isdigit()
+    
+    def validar_texto_sin_numeros(self, P):
+        """Permite solo texto, rechaza si contiene dígitos numéricos."""
+        if P == "": return True # Permitir borrar todo para corregir
+        # Retorna False si encuentra algún dígito (0-9) en el texto ingresado
+        return not any(char.isdigit() for char in P)
 
     def _crear_widgets_sidebar(self):     
         # título 
@@ -370,8 +378,11 @@ class adminapp:
 
         tk.Label(ventana_add, text="Nombre del nuevo topping:", bg=COLOR_SIDEBAR, 
                  fg=COLOR_TEXT, font=("Arial", 12)).pack(pady=15) 
-
-        entry_nombre = tk.Entry(ventana_add, font=("Arial", 14)) 
+        
+        # VALIDACIÓN APLICADA AQUÍ (Agregar Topping)
+        entry_nombre = tk.Entry(ventana_add, font=("Arial", 14),
+                                validate='key', validatecommand=self.vcmd_texto) 
+        
         entry_nombre.pack(pady=5, padx=30, fill="x")
         entry_nombre.focus() 
 
@@ -502,7 +513,10 @@ class adminapp:
         tk.Label(ventana_edit, text="Nuevo nombre del topping:", bg=COLOR_SIDEBAR, 
                  fg=COLOR_TEXT, font=("Arial", 12)).pack(pady=15) 
         
-        entry_nuevo = tk.Entry(ventana_edit, font=("Arial", 14)) 
+        # VALIDACIÓN APLICADA AQUÍ (Editar Topping)
+        entry_nuevo = tk.Entry(ventana_edit, font=("Arial", 14),
+                               validate='key', validatecommand=self.vcmd_texto) 
+        
         entry_nuevo.insert(0, nombre_actual) # nombre actual
         entry_nuevo.pack(pady=5, padx=30, fill="x")
         entry_nuevo.focus()
@@ -684,8 +698,10 @@ class adminapp:
         # variables de control
         self.categoria_seleccionada = tk.StringVar(form_frame)
         self.cant_topings_var = tk.StringVar(form_frame, value="0") 
-        self.entry_nombre = tk.Entry(form_frame, font=("Arial", 14)) 
-        self.entry_desc = tk.Entry(form_frame, font=("Arial", 14)) 
+
+        # VALIDACIÓN APLICADA AQUÍ (Agregar Producto)
+        self.entry_nombre = tk.Entry(form_frame, font=("Arial", 14), validate='key', validatecommand=self.vcmd_texto) 
+        self.entry_desc = tk.Entry(form_frame, font=("Arial", 14), validate='key', validatecommand=self.vcmd_texto) 
         
         # validar precio
         self.entry_precio = tk.Entry(form_frame, font=("Arial", 14), validate='key', validatecommand=self.vcmd_precio) 
@@ -926,11 +942,17 @@ class adminapp:
 
         # nombre
         tk.Label(form_frame, text="Nombre:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT, font=("Arial", 12)).grid(row=1, column=0, sticky="w", pady=10)
-        tk.Entry(form_frame, textvariable=self._nombre_var, font=("Arial", 14)).grid(row=1, column=1, sticky="ew", pady=10, padx=5)
+        
+        # VALIDACIÓN APLICADA AQUÍ (Editar Producto - Nombre)
+        tk.Entry(form_frame, textvariable=self._nombre_var, font=("Arial", 14), 
+                 validate='key', validatecommand=self.vcmd_texto).grid(row=1, column=1, sticky="ew", pady=10, padx=5)
 
         # descripción
         tk.Label(form_frame, text="Descripción:", bg=COLOR_SIDEBAR, fg=COLOR_TEXT, font=("Arial", 12)).grid(row=2, column=0, sticky="w", pady=10)
-        tk.Entry(form_frame, textvariable=self._desc_var, font=("Arial", 14)).grid(row=2, column=1, sticky="ew", pady=10, padx=5)
+        
+        # VALIDACIÓN APLICADA AQUÍ (Editar Producto - Descripción)
+        tk.Entry(form_frame, textvariable=self._desc_var, font=("Arial", 14),
+                 validate='key', validatecommand=self.vcmd_texto).grid(row=2, column=1, sticky="ew", pady=10, padx=5)
 
         # precio (validado)
         tk.Label(form_frame, text="Precio (0.00):", bg=COLOR_SIDEBAR, fg=COLOR_TEXT, font=("Arial", 12)).grid(row=3, column=0, sticky="w", pady=10)

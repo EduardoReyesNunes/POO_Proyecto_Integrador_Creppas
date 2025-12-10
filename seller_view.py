@@ -3,8 +3,8 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import os
 import seller_controller as controller 
-import admin_view
-from decimal import Decimal, InvalidOperation # Importar Decimal para manejo de moneda
+# import admin_view  <-- SE ELIMINÓ DE AQUÍ PARA EVITAR EL ERROR
+from decimal import Decimal, InvalidOperation 
 
 # Colores Suaves (Mantenidos desde admin_view para consistencia)
 COLOR_MAIN_BG = "#EAE4D9"      
@@ -215,7 +215,12 @@ class sellerApp:
     def abrir_panel_admin(self):
         password = self.entry_admin_pass.get().strip()
         if controller.validar_login("ADMIN", password): 
-            self.root.destroy()
+            self.root.destroy() # Primero destruir la ventana actual
+            
+            # --- IMPORTACIÓN LOCAL PARA CORREGIR EL ERROR ---
+            import admin_view 
+            # ------------------------------------------------
+            
             root_admin = tk.Tk()
             admin_view.adminapp(root_admin) 
             root_admin.mainloop()
